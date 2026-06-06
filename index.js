@@ -118,41 +118,40 @@ app.get("/overlay", (_req, res) => {
     padding: 20px;
     display: flex;
     flex-direction: column-reverse;
-    gap: 14px;
+    gap: 10px;
+    align-items: flex-start; /* bubbles hug content width */
   }
 
+  /* Row: avatar on the left, bubble on the right */
   .msg {
-  display: inline-flex; /* <--- IMPORTANT: inline-flex makes width match content */
-  align-items: flex-start;
-  gap: 12px;
-  background: rgba(0,0,0,1);
-  color: white;
-  padding: 12px 16px;
-  border-radius: 14px;
-  font-size: 22px;
-  max-width: 80%; /* still prevents super-long messages from stretching */
-  width: auto; /* <--- ensures bubble wraps to content */
-  backdrop-filter: blur(6px);
-  animation: fadeIn 0.8s ease-out;
-}
-
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
 
   .avatar {
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     flex-shrink: 0;
   }
 
-  .content {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.3;
+  /* Bubble matches content width, with a max */
+  .bubble {
+    background: rgba(0,0,0,1);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 14px;
+    font-size: 20px;
+    max-width: 70%;      /* prevents super-long messages */
+    display: inline-block; /* key: shrink to fit content */
+    backdrop-filter: blur(6px);
+    animation: fadeIn 0.8s ease-out;
   }
 
   .username {
     font-weight: 600;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
 
   .fadeOut {
@@ -199,6 +198,9 @@ app.get("/overlay", (_req, res) => {
       wrapper.appendChild(img);
     }
 
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+
     const content = document.createElement("div");
     content.className = "content";
 
@@ -212,12 +214,13 @@ app.get("/overlay", (_req, res) => {
     text.textContent = msg.text;
     content.appendChild(text);
 
-    wrapper.appendChild(content);
+    bubble.appendChild(content);
+    wrapper.appendChild(bubble);
 
     document.getElementById("messages").prepend(wrapper);
 
     setTimeout(() => {
-      wrapper.classList.add("fadeOut");
+      bubble.classList.add("fadeOut");
       setTimeout(() => wrapper.remove(), 1200);
     }, 45000);
   };
