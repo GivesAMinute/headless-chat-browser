@@ -2,7 +2,7 @@ import express from "express";
 import puppeteer from "puppeteer";
 import { WebSocketServer } from "ws";
 import fetch from "node-fetch";
-import { startYouTube } from "./sources/youtube.js";   // <--- NEW
+import { startYouTube } from "./sources/youtube.js";
 
 const app = express();
 const port = process.env.PORT || 8080;
@@ -43,8 +43,26 @@ async function startBrowser() {
 
   page = await browser.newPage();
 
-  console.log("Loading Beamstream chat…");
+  //// >>> NEW BEAM LOGIN CODE <<<
+  console.log("Injecting Beam login session…");
 
+  // Load Beam homepage first
+  await page.goto("https://beamstream.gg", { waitUntil: "domcontentloaded" });
+
+  // Parse your Railway variable
+  const storage = JSON.parse(process.env.BEAM_LOCALSTORAGE);
+
+  // Inject your Beam session into localStorage
+  await page.evaluate((storage) => {
+    for (const [key, value] of Object.entries(storage)) {
+      localStorage.setItem(key, value);
+    }
+  }, storage);
+
+  console.log("Beam session injected. Loading chat…");
+  //// >>> END NEW CODE <<<
+
+  // Now load your chat page AS YOU (fully authenticated)
   await page.goto("https://beamstream.gg/givesaminute/chat", {
     waitUntil: "networkidle2"
   });
@@ -247,7 +265,7 @@ const server = app.listen(port, () => {
     console.error("Browser failed to start:", err);
   });
 
-  startYouTube(broadcast);   // <--- NEW
+  startYouTube(broadcast);
 });
 
 server.on("upgrade", (req, socket, head) => {
