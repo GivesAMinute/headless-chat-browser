@@ -122,18 +122,20 @@ app.get("/overlay", (_req, res) => {
   }
 
   .msg {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    background: rgba(0,0,0,1);
-    color: white;
-    padding: 12px 16px;
-    border-radius: 14px;
-    font-size: 22px;
-    max-width: 80%;
-    backdrop-filter: blur(6px);
-    animation: fadeIn 0.8s ease-out;
-  }
+  display: inline-flex; /* <--- IMPORTANT: inline-flex makes width match content */
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(0,0,0,1);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-size: 22px;
+  max-width: 80%; /* still prevents super-long messages from stretching */
+  width: auto; /* <--- ensures bubble wraps to content */
+  backdrop-filter: blur(6px);
+  animation: fadeIn 0.8s ease-out;
+}
+
 
   .avatar {
     width: 42px;
