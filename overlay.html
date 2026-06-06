@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Merged Chat Overlay</title>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+  body {
+    margin: 0;
+    background: transparent;
+    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    overflow: hidden;
+  }
+
+  #messages {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    padding: 20px;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .msg {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .platform-icon {
+    width: 26px;
+    height: 26px;
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
+
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .bubble {
+    background: rgba(0,0,0,0.85);
+    color: white;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 20px;
+    max-width: 90%;
+    display: inline-block;
+    backdrop-filter: blur(6px);
+    animation: fadeIn 0.8s ease-out;
+    word-break: break-word;
+    white-space: normal;
+  }
+
+  .username {
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .fadeOut {
+    animation: fadeOut 1.2s forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-20px); }
+  }
+</style>
+</head>
+
+<body>
+<div id="messages"></div>
+
+<script>
+  const ws = new WebSocket("wss://" + location.host);
+
+  function avatarFor(msg) {
+    if (msg.platform === "beam" && msg.avatar) {
+      return msg.avatar;
+    }
+    return `/icons/${msg.platform}.png`;
+  }
+
+  function colorForUsername(name) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = (hash * 31 + name.charCodeAt(i)) | 0;
+    }
+    const hue = Math.abs(hash) % 360;
+    return "hsl(" + hue + ", 70%, 60%)";
+  }
+
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "msg";
+
+    const icon = document.createElement("img");
+    icon.className = "platform-icon";
+    icon.src = `/icons/${msg.platform}.png`;
+    wrapper.appendChild(icon);
+
+    const img = document.createElement("img");
+    img.className = "avatar";
+    img.src = avatarFor(msg);
+    wrapper.appendChild(img);
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+
+    const content = document.createElement("div");
+    content.className = "content";
+
+    const name = document.createElement("div");
+    name.className = "username";
+    name.textContent = msg.username;
+    name.style.color = colorForUsername(msg.username);
+    content.appendChild(name);
+
+    const text = document.createElement("div");
+    text.textContent = msg.text;
+    content.appendChild(text);
+
+    bubble.appendChild(content);
+    wrapper.appendChild(bubble);
+
+    document.getElementById("messages").prepend(wrapper);
+
+    setTimeout(() => {
+      bubble.classList.add("fadeOut");
+      setTimeout(() => wrapper.remove(), 1200);
+    }, 45000);
+  };
+</script>
+</body>
+</html>

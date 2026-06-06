@@ -2,10 +2,18 @@ import express from "express";
 import puppeteer from "puppeteer";
 import { WebSocketServer } from "ws";
 import fetch from "node-fetch";
+import path from "path";
+import { fileURLToPath } from "url";
 import { startYouTube } from "./sources/youtube.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 8080;
+
+// Serve icons folder
+app.use("/icons", express.static(path.join(__dirname, "public/icons")));
 
 let browser;
 let page;
@@ -42,44 +50,34 @@ async function startBrowser() {
 
   page = await browser.newPage();
 
-  // DEBUG: Print browser console logs to Railway
   page.on("console", (msg) => console.log("BROWSER LOG:", msg.text()));
 
   console.log("Injecting Beam login session…");
 
-  // Load Beam homepage first
   await page.goto("https://beamstream.gg", { waitUntil: "domcontentloaded" });
 
-  // Parse your Railway variable
   const storage = JSON.parse(process.env.BEAM_LOCALSTORAGE);
 
-  // Inject your Beam session into localStorage
   await page.evaluate((storage) => {
     for (const [key, value] of Object.entries(storage)) {
       localStorage.setItem(key, value);
     }
   }, storage);
 
-  // DEBUG: Print localStorage keys clearly
   await page.evaluate(() => {
-    const keys = Object.keys(localStorage);
-    console.log("LOCALSTORAGE_KEYS:", JSON.stringify(keys));
+    console.log("LOCALSTORAGE_KEYS:", JSON.stringify(Object.keys(localStorage)));
   });
 
   console.log("Beam session injected. Loading chat…");
 
-  // Load chat page as authenticated user
   await page.goto("https://beamstream.gg/givesaminute/chat", {
     waitUntil: "networkidle2"
   });
 
-  // DEBUG: Print keys again after navigation
   await page.evaluate(() => {
-    const keys = Object.keys(localStorage);
-    console.log("AFTER_NAV_KEYS:", JSON.stringify(keys));
+    console.log("AFTER_NAV_KEYS:", JSON.stringify(Object.keys(localStorage)));
   });
 
-  // Give Beam time to hydrate
   await new Promise((resolve) => setTimeout(resolve, 5000));
 
   console.log("Injecting message observer…");
@@ -90,28 +88,34 @@ async function startBrowser() {
   });
 
   // ------------------------------
-  // CORRECT OBSERVER FOR BEAM v2
+  // Beam v2 observer
   // ------------------------------
   await page.evaluate(() => {
-    const selector = 'div[typeof="ChatMessage"], div[typeof="ChatMessageExternal"]';
+    const selector =
+      'div[typeof="ChatMessage"], div[typeof="ChatMessageExternal"]';
 
     const observer = new MutationObserver(() => {
       const messages = [...document.querySelectorAll(selector)];
       const last = messages[messages.length - 1];
       if (!last) return;
 
-      const username = last.querySelector('[property="sender.name"]')?.innerText?.trim() || "";
-      const text = last.querySelector('[property="body"]')?.innerText?.trim() || "";
-      const avatar = last.querySelector('[property="avatar"]')?.src || null;
+      const username =
+        last.querySelector('[property="sender.name"]')?.innerText?.trim() || "";
+      const text =
+        last.querySelector('[property="body"]')?.innerText?.trim() || "";
+      const avatar =
+        last.querySelector('[property="avatar"]')?.src || null;
 
-      if (username && text) {
-        window.relayMessage({
-          platform: "beam",
-          username,
-          text,
-          avatar
-        });
-      }
+      let platform =
+        last.querySelector('[property="service"]')?.getAttribute("value") ||
+        "beam";
+
+      window.relayMessage({
+        platform,
+        username,
+        text,
+        avatar
+      });
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
@@ -124,134 +128,7 @@ async function startBrowser() {
 // Overlay route
 // ------------------------------
 app.get("/overlay", (_req, res) => {
-  res.send(`<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8" />
-<title>Merged Chat Overlay</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
-
-  body {
-    margin: 0;
-    background: transparent;
-    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    overflow: hidden;
-  }
-
-  #messages {
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    padding: 20px;
-    display: flex;
-    flex-direction: column-reverse;
-    gap: 10px;
-    align-items: flex-start;
-  }
-
-  .msg {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  .bubble {
-    background: rgba(0,0,0,1);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 14px;
-    font-size: 20px;
-    max-width: 70%;
-    display: inline-block;
-    backdrop-filter: blur(6px);
-    animation: fadeIn 0.8s ease-out;
-  }
-
-  .username {
-    font-weight: 600;
-    margin-bottom: 2px;
-  }
-
-  .fadeOut {
-    animation: fadeOut 1.2s forwards;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes fadeOut {
-    from { opacity: 1; transform: translateY(0); }
-    to { opacity: 0; transform: translateY(-20px); }
-  }
-</style>
-</head>
-<body>
-<div id="messages"></div>
-
-<script>
-  const ws = new WebSocket("wss://" + location.host);
-
-  function colorForUsername(name) {
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = (hash * 31 + name.charCodeAt(i)) | 0;
-    }
-    const hue = Math.abs(hash) % 360;
-    return "hsl(" + hue + ", 70%, 60%)";
-  }
-
-  ws.onmessage = (event) => {
-    const msg = JSON.parse(event.data);
-
-    const wrapper = document.createElement("div");
-    wrapper.className = "msg";
-
-    if (msg.avatar) {
-      const img = document.createElement("img");
-      img.className = "avatar";
-      img.src = msg.avatar;
-      wrapper.appendChild(img);
-    }
-
-    const bubble = document.createElement("div");
-    bubble.className = "bubble";
-
-    const content = document.createElement("div");
-    content.className = "content";
-
-    const name = document.createElement("div");
-    name.className = "username";
-    name.textContent = msg.username;
-    name.style.color = colorForUsername(msg.username);
-    content.appendChild(name);
-
-    const text = document.createElement("div");
-    text.textContent = msg.text;
-    content.appendChild(text);
-
-    bubble.appendChild(content);
-    wrapper.appendChild(bubble);
-
-    document.getElementById("messages").prepend(wrapper);
-
-    setTimeout(() => {
-      bubble.classList.add("fadeOut");
-      setTimeout(() => wrapper.remove(), 1200);
-    }, 45000);
-  };
-</script>
-</body>
-</html>`);
+  res.sendFile(path.join(__dirname, "overlay.html"));
 });
 
 // ------------------------------
