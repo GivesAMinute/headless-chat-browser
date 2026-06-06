@@ -43,7 +43,6 @@ async function startBrowser() {
 
   page = await browser.newPage();
 
-  //// >>> NEW BEAM LOGIN CODE <<<
   console.log("Injecting Beam login session…");
 
   // Load Beam homepage first
@@ -60,7 +59,6 @@ async function startBrowser() {
   }, storage);
 
   console.log("Beam session injected. Loading chat…");
-  //// >>> END NEW CODE <<<
 
   // Now load your chat page AS YOU (fully authenticated)
   await page.goto("https://beamstream.gg/givesaminute/chat", {
@@ -74,39 +72,30 @@ async function startBrowser() {
     broadcast(msg);
   });
 
+  // ------------------------------
+  // UPDATED OBSERVER FOR BEAM v2
+  // ------------------------------
   await page.evaluate(() => {
-    const observer = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        for (const node of m.addedNodes) {
-          if (
-            node.nodeType === 1 &&
-            node.getAttribute("typeof") === "ChatMessage"
-          ) {
-            const usernameEl = node.querySelector('[property="sender.name"]');
-            const textEl = node.querySelector('[property="body"]');
-            const avatarEl = node.querySelector('[property="avatar"]');
+    const observer = new MutationObserver(() => {
+      const messages = [...document.querySelectorAll("[data-testid='chat-message']")];
+      const last = messages[messages.length - 1];
+      if (!last) return;
 
-            const username = usernameEl?.innerText.trim();
-            const text = textEl?.innerText.trim();
-            const avatar = avatarEl?.src || null;
+      const username = last.querySelector("[data-testid='chat-username']")?.innerText || "";
+      const text = last.querySelector("[data-testid='chat-text']")?.innerText || "";
+      const avatar = last.querySelector("[data-testid='chat-avatar']")?.src || null;
 
-            if (username && text) {
-              window.relayMessage({
-                platform: "beam",
-                username,
-                text,
-                avatar
-              });
-            }
-          }
-        }
+      if (username && text) {
+        window.relayMessage({
+          platform: "beam",
+          username,
+          text,
+          avatar
+        });
       }
     });
 
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+    observer.observe(document.body, { childList: true, subtree: true });
   });
 
   console.log("Headless browser loaded Beamstream chat");
