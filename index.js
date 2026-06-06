@@ -30,8 +30,7 @@ async function startBrowser() {
   console.log("Launching headless browser…");
 
   browser = await puppeteer.launch({
-    headless: "new",
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+    headless: true,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
@@ -42,6 +41,9 @@ async function startBrowser() {
   });
 
   page = await browser.newPage();
+
+  // DEBUG: Print browser console logs to Railway
+  page.on("console", (msg) => console.log("BROWSER LOG:", msg.text()));
 
   console.log("Injecting Beam login session…");
 
@@ -58,12 +60,25 @@ async function startBrowser() {
     }
   }, storage);
 
+  // DEBUG: Print localStorage keys to confirm login
+  await page.evaluate(() => {
+    console.log("LOCALSTORAGE_KEYS", Object.keys(localStorage));
+  });
+
   console.log("Beam session injected. Loading chat…");
 
   // Now load your chat page AS YOU (fully authenticated)
   await page.goto("https://beamstream.gg/givesaminute/chat", {
     waitUntil: "networkidle2"
   });
+
+  // DEBUG: Print localStorage keys again after navigation
+  await page.evaluate(() => {
+    console.log("AFTER_NAV_KEYS", Object.keys(localStorage));
+  });
+
+  // Wait for Beam to hydrate React
+  await page.waitForTimeout(5000);
 
   console.log("Injecting message observer…");
 
