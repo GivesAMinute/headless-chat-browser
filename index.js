@@ -59,7 +59,6 @@ async function startBrowser() {
   // - username
   // - text
   // - avatar
-  // - username color (computed)
   await page.evaluate(() => {
     const observer = new MutationObserver((mutations) => {
       for (const m of mutations) {
@@ -76,13 +75,8 @@ async function startBrowser() {
             const text = textEl?.innerText.trim();
             const avatar = avatarEl?.src || null;
 
-            // ⭐ FIXED: Always get the REAL Beam color
-            const color = usernameEl
-              ? window.getComputedStyle(usernameEl).color
-              : "white";
-
             if (username && text) {
-              window.relayMessage({ username, text, avatar, color });
+              window.relayMessage({ username, text, avatar });
             }
           }
         }
@@ -108,10 +102,12 @@ app.get("/overlay", (_req, res) => {
 <meta charset="UTF-8" />
 <title>Beam Chat Overlay</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
   body {
     margin: 0;
     background: transparent;
-    font-family: Arial, sans-serif;
+    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     overflow: hidden;
   }
 
@@ -153,7 +149,7 @@ app.get("/overlay", (_req, res) => {
   }
 
   .username {
-    font-weight: bold;
+    font-weight: 600;
     margin-bottom: 4px;
   }
 
@@ -178,6 +174,16 @@ app.get("/overlay", (_req, res) => {
 <script>
   const ws = new WebSocket("wss://" + location.host);
 
+  // Deterministic color per username (Beam-style vibe)
+  function colorForUsername(name) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = (hash * 31 + name.charCodeAt(i)) | 0;
+    }
+    const hue = Math.abs(hash) % 360;
+    return "hsl(" + hue + ", 70%, 60%)";
+  }
+
   ws.onmessage = (event) => {
     const msg = JSON.parse(event.data);
 
@@ -197,7 +203,7 @@ app.get("/overlay", (_req, res) => {
     const name = document.createElement("div");
     name.className = "username";
     name.textContent = msg.username;
-    name.style.color = msg.color || "white";
+    name.style.color = colorForUsername(msg.username);
     content.appendChild(name);
 
     const text = document.createElement("div");
