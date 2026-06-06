@@ -49,13 +49,23 @@ async function startBrowser() {
 
   console.log("Injecting message observer…");
 
-  // Expose relay function to Node
+  // ---------------------------------------------------------
+  // NEW: Expose relay function so browser → Node → overlay
+  // ---------------------------------------------------------
   await page.exposeFunction("relayMessage", (msg) => {
     console.log("New chat message:", msg);
     broadcast(msg);
   });
 
-  // Inject MutationObserver into the page
+  // ---------------------------------------------------------
+  // UPDATED: MutationObserver now extracts:
+  // - username
+  // - text
+  // - avatar
+  // - username color
+  //
+  // Time REMOVED (you said OFF)
+  // ---------------------------------------------------------
   await page.evaluate(() => {
     const observer = new MutationObserver((mutations) => {
       for (const m of mutations) {
@@ -64,16 +74,19 @@ async function startBrowser() {
             node.nodeType === 1 &&
             node.getAttribute("typeof") === "ChatMessage"
           ) {
-            const username = node
-              .querySelector('[property="sender.name"]')
-              ?.innerText.trim();
+            const usernameEl = node.querySelector('[property="sender.name"]');
+            const textEl = node.querySelector('[property="body"]');
+            const avatarEl = node.querySelector('[property="avatar"]');
 
-            const text = node
-              .querySelector('[property="body"]')
-              ?.innerText.trim();
+            const username = usernameEl?.innerText.trim();
+            const text = textEl?.innerText.trim();
+            const avatar = avatarEl?.src || null;
+
+            // NEW: Extract Beam colored name
+            const color = usernameEl?.style?.color || null;
 
             if (username && text) {
-              window.relayMessage({ username, text });
+              window.relayMessage({ username, text, avatar, color });
             }
           }
         }
@@ -93,6 +106,14 @@ async function startBrowser() {
 // Overlay route
 // ------------------------------
 app.get("/overlay", (_req, res) => {
+  // ---------------------------------------------------------
+  // UPDATED OVERLAY:
+  // - avatars
+  // - colored names
+  // - nicer bubbles
+  // - large font
+  // - no time
+  // ---------------------------------------------------------
   res.send(`
 <!DOCTYPE html>
 <html>
@@ -104,7 +125,9 @@ app.get("/overlay", (_req, res) => {
     margin: 0;
     background: transparent;
     font-family: Arial, sans-serif;
+    overflow: hidden;
   }
+
   #messages {
     position: absolute;
     bottom: 0;
@@ -112,16 +135,44 @@ app.get("/overlay", (_req, res) => {
     padding: 20px;
     display: flex;
     flex-direction: column-reverse;
-    gap: 10px;
+    gap: 14px;
   }
+
   .msg {
-    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: rgba(0,0,0,0.45);
     color: white;
-    padding: 10px 14px;
-    border-radius: 12px;
-    font-size: 20px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 22px;
     max-width: 80%;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(6px);
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+  }
+
+  .username {
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 </style>
 </head>
@@ -133,10 +184,35 @@ app.get("/overlay", (_req, res) => {
 
   ws.onmessage = (event) => {
     const msg = JSON.parse(event.data);
-    const div = document.createElement("div");
-    div.className = "msg";
-    div.textContent = msg.username + ": " + msg.text;
-    document.getElementById("messages").prepend(div);
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "msg";
+
+    // NEW: Avatar support
+    if (msg.avatar) {
+      const img = document.createElement("img");
+      img.className = "avatar";
+      img.src = msg.avatar;
+      wrapper.appendChild(img);
+    }
+
+    const content = document.createElement("div");
+    content.className = "content";
+
+    // NEW: Colored usernames
+    const name = document.createElement("div");
+    name.className = "username";
+    name.textContent = msg.username;
+    name.style.color = msg.color || "white";
+    content.appendChild(name);
+
+    const text = document.createElement("div");
+    text.textContent = msg.text;
+    content.appendChild(text);
+
+    wrapper.appendChild(content);
+
+    document.getElementById("messages").prepend(wrapper);
   };
 </script>
 </body>
