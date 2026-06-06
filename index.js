@@ -185,3 +185,72 @@ app.get("/overlay", (_req, res) => {
 <div id="messages"></div>
 
 <script>
+  const ws = new WebSocket("wss://" + location.host);
+
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "msg";
+
+    if (msg.avatar) {
+      const img = document.createElement("img");
+      img.className = "avatar";
+      img.src = msg.avatar;
+      wrapper.appendChild(img);
+    }
+
+    const content = document.createElement("div");
+    content.className = "content";
+
+    const name = document.createElement("div");
+    name.className = "username";
+    name.textContent = msg.username;
+    name.style.color = msg.color || "white";
+    content.appendChild(name);
+
+    const text = document.createElement("div");
+    text.textContent = msg.text;
+    content.appendChild(text);
+
+    wrapper.appendChild(content);
+
+    document.getElementById("messages").prepend(wrapper);
+
+    // -----------------------------------------
+    // Auto-remove after 45 seconds
+    // -----------------------------------------
+    setTimeout(() => {
+      wrapper.classList.add("fadeOut");
+      setTimeout(() => wrapper.remove(), 1200);
+    }, 45000);
+  };
+</script>
+</body>
+</html>`);
+});
+
+// ------------------------------
+// KEEP-ALIVE PING (prevents Railway sleep)
+// ------------------------------
+setInterval(() => {
+  fetch("https://" + process.env.RAILWAY_STATIC_URL)
+    .then(() => console.log("Keep-alive ping sent"))
+    .catch(() => {});
+}, 1000 * 60 * 4); // every 4 minutes
+
+// ------------------------------
+// HTTP + WebSocket upgrade
+// ------------------------------
+const server = app.listen(port, () => {
+  console.log("Server listening on " + port);
+  startBrowser().catch((err) => {
+    console.error("Browser failed to start:", err);
+  });
+});
+
+server.on("upgrade", (req, socket, head) => {
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    wss.emit("connection", ws, req);
+  });
+});
