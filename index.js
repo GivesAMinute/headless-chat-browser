@@ -60,25 +60,27 @@ async function startBrowser() {
     }
   }, storage);
 
-  // DEBUG: Print localStorage keys to confirm login
+  // DEBUG: Print localStorage keys clearly
   await page.evaluate(() => {
-    console.log("LOCALSTORAGE_KEYS", Object.keys(localStorage));
+    const keys = Object.keys(localStorage);
+    console.log("LOCALSTORAGE_KEYS:", JSON.stringify(keys));
   });
 
   console.log("Beam session injected. Loading chat…");
 
-  // Now load your chat page AS YOU (fully authenticated)
+  // Load chat page as authenticated user
   await page.goto("https://beamstream.gg/givesaminute/chat", {
     waitUntil: "networkidle2"
   });
 
-  // DEBUG: Print localStorage keys again after navigation
+  // DEBUG: Print keys again after navigation
   await page.evaluate(() => {
-    console.log("AFTER_NAV_KEYS", Object.keys(localStorage));
+    const keys = Object.keys(localStorage);
+    console.log("AFTER_NAV_KEYS:", JSON.stringify(keys));
   });
 
-  // Wait for Beam to hydrate React
-  await page.waitForTimeout(5000);
+  // Give Beam time to hydrate
+  await new Promise((resolve) => setTimeout(resolve, 5000));
 
   console.log("Injecting message observer…");
 
