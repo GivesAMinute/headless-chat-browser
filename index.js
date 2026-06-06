@@ -50,7 +50,7 @@ async function startBrowser() {
   console.log("Injecting message observer…");
 
   // ---------------------------------------------------------
-  // NEW: Expose relay function so browser → Node → overlay
+  // Expose relay function so browser → Node → overlay
   // ---------------------------------------------------------
   await page.exposeFunction("relayMessage", (msg) => {
     console.log("New chat message:", msg);
@@ -58,13 +58,11 @@ async function startBrowser() {
   });
 
   // ---------------------------------------------------------
-  // UPDATED: MutationObserver now extracts:
+  // MutationObserver extracts:
   // - username
   // - text
   // - avatar
   // - username color
-  //
-  // Time REMOVED (you said OFF)
   // ---------------------------------------------------------
   await page.evaluate(() => {
     const observer = new MutationObserver((mutations) => {
@@ -82,7 +80,7 @@ async function startBrowser() {
             const text = textEl?.innerText.trim();
             const avatar = avatarEl?.src || null;
 
-            // NEW: Extract Beam colored name
+            // Beam colored name
             const color = usernameEl?.style?.color || null;
 
             if (username && text) {
@@ -106,16 +104,7 @@ async function startBrowser() {
 // Overlay route
 // ------------------------------
 app.get("/overlay", (_req, res) => {
-  // ---------------------------------------------------------
-  // UPDATED OVERLAY:
-  // - avatars
-  // - colored names
-  // - nicer bubbles
-  // - large font
-  // - no time
-  // ---------------------------------------------------------
-  res.send(`
-<!DOCTYPE html>
+  res.send(`<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8" />
@@ -138,17 +127,11 @@ app.get("/overlay", (_req, res) => {
     gap: 14px;
   }
 
-  /* -----------------------------------------
-     UPDATED: Message bubble styling
-     - Background set to rgba(0,0,0,1)
-     - Larger font
-     - Fade-in animation
-  ----------------------------------------- */
   .msg {
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    background: rgba(0,0,0,1); /* <--- YOUR NEW COLOR */
+    background: rgba(0,0,0,1);
     color: white;
     padding: 12px 16px;
     border-radius: 14px;
@@ -176,9 +159,6 @@ app.get("/overlay", (_req, res) => {
     margin-bottom: 4px;
   }
 
-  /* -----------------------------------------
-     NEW: Fade-out animation for message removal
-  ----------------------------------------- */
   .fadeOut {
     animation: fadeOut 0.5s forwards;
   }
@@ -206,7 +186,6 @@ app.get("/overlay", (_req, res) => {
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
 
-    // Avatar
     if (msg.avatar) {
       const img = document.createElement("img");
       img.className = "avatar";
@@ -217,7 +196,6 @@ app.get("/overlay", (_req, res) => {
     const content = document.createElement("div");
     content.className = "content";
 
-    // Colored username
     const name = document.createElement("div");
     name.className = "username";
     name.textContent = msg.username;
@@ -232,11 +210,6 @@ app.get("/overlay", (_req, res) => {
 
     document.getElementById("messages").prepend(wrapper);
 
-    /* -----------------------------------------
-       NEW: Auto-remove message after 45 seconds
-       - Add fadeOut class at 45s
-       - Remove element at 45.5s
-    ----------------------------------------- */
     setTimeout(() => {
       wrapper.classList.add("fadeOut");
       setTimeout(() => wrapper.remove(), 500);
@@ -244,8 +217,7 @@ app.get("/overlay", (_req, res) => {
   };
 </script>
 </body>
-</html>
-  `);
+</html>`);
 });
 
 // ------------------------------
