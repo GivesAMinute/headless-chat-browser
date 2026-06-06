@@ -1,6 +1,8 @@
 import express from "express";
 import puppeteer from "puppeteer";
 import { WebSocketServer } from "ws";
+import fetch from "node-fetch";
+import { startYouTube } from "./sources/youtube.js";   // <--- NEW
 
 const app = express();
 const port = process.env.PORT || 8080;
@@ -22,7 +24,7 @@ function broadcast(msg) {
 }
 
 // ------------------------------
-// Start headless browser
+// Start headless browser (Beam)
 // ------------------------------
 async function startBrowser() {
   console.log("Launching headless browser…");
@@ -49,16 +51,11 @@ async function startBrowser() {
 
   console.log("Injecting message observer…");
 
-  // Expose relay function so browser → Node → overlay
   await page.exposeFunction("relayMessage", (msg) => {
     console.log("New chat message:", msg);
     broadcast(msg);
   });
 
-  // MutationObserver extracts:
-  // - username
-  // - text
-  // - avatar
   await page.evaluate(() => {
     const observer = new MutationObserver((mutations) => {
       for (const m of mutations) {
@@ -76,7 +73,12 @@ async function startBrowser() {
             const avatar = avatarEl?.src || null;
 
             if (username && text) {
-              window.relayMessage({ username, text, avatar });
+              window.relayMessage({
+                platform: "beam",
+                username,
+                text,
+                avatar
+              });
             }
           }
         }
@@ -100,7 +102,7 @@ app.get("/overlay", (_req, res) => {
 <html>
 <head>
 <meta charset="UTF-8" />
-<title>Beam Chat Overlay</title>
+<title>Merged Chat Overlay</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
 
@@ -119,10 +121,9 @@ app.get("/overlay", (_req, res) => {
     display: flex;
     flex-direction: column-reverse;
     gap: 10px;
-    align-items: flex-start; /* bubbles hug content width */
+    align-items: flex-start;
   }
 
-  /* Row: avatar on the left, bubble on the right */
   .msg {
     display: flex;
     align-items: flex-start;
@@ -136,15 +137,14 @@ app.get("/overlay", (_req, res) => {
     flex-shrink: 0;
   }
 
-  /* Bubble matches content width, with a max */
   .bubble {
     background: rgba(0,0,0,1);
     color: white;
     padding: 8px 12px;
     border-radius: 14px;
     font-size: 20px;
-    max-width: 70%;      /* prevents super-long messages */
-    display: inline-block; /* key: shrink to fit content */
+    max-width: 70%;
+    display: inline-block;
     backdrop-filter: blur(6px);
     animation: fadeIn 0.8s ease-out;
   }
@@ -175,7 +175,6 @@ app.get("/overlay", (_req, res) => {
 <script>
   const ws = new WebSocket("wss://" + location.host);
 
-  // Deterministic color per username (Beam-style vibe)
   function colorForUsername(name) {
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
@@ -230,22 +229,25 @@ app.get("/overlay", (_req, res) => {
 });
 
 // ------------------------------
-// KEEP-ALIVE PING (prevents Railway sleep)
+// KEEP-ALIVE PING
 // ------------------------------
 setInterval(() => {
   fetch("https://" + process.env.RAILWAY_STATIC_URL)
     .then(() => console.log("Keep-alive ping sent"))
     .catch(() => {});
-}, 1000 * 60 * 4); // every 4 minutes
+}, 1000 * 60 * 4);
 
 // ------------------------------
 // HTTP + WebSocket upgrade
 // ------------------------------
 const server = app.listen(port, () => {
   console.log("Server listening on " + port);
+
   startBrowser().catch((err) => {
     console.error("Browser failed to start:", err);
   });
+
+  startYouTube(broadcast);   // <--- NEW
 });
 
 server.on("upgrade", (req, socket, head) => {
