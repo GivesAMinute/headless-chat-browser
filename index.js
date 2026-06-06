@@ -138,11 +138,17 @@ app.get("/overlay", (_req, res) => {
     gap: 14px;
   }
 
+  /* -----------------------------------------
+     UPDATED: Message bubble styling
+     - Background set to rgba(0,0,0,1)
+     - Larger font
+     - Fade-in animation
+  ----------------------------------------- */
   .msg {
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    background: rgba(0,0,0,0.45);
+    background: rgba(0,0,0,1); /* <--- YOUR NEW COLOR */
     color: white;
     padding: 12px 16px;
     border-radius: 14px;
@@ -170,9 +176,21 @@ app.get("/overlay", (_req, res) => {
     margin-bottom: 4px;
   }
 
+  /* -----------------------------------------
+     NEW: Fade-out animation for message removal
+  ----------------------------------------- */
+  .fadeOut {
+    animation: fadeOut 0.5s forwards;
+  }
+
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; transform: translateY(-10px); }
   }
 </style>
 </head>
@@ -188,7 +206,7 @@ app.get("/overlay", (_req, res) => {
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
 
-    // NEW: Avatar support
+    // Avatar
     if (msg.avatar) {
       const img = document.createElement("img");
       img.className = "avatar";
@@ -199,7 +217,7 @@ app.get("/overlay", (_req, res) => {
     const content = document.createElement("div");
     content.className = "content";
 
-    // NEW: Colored usernames
+    // Colored username
     const name = document.createElement("div");
     name.className = "username";
     name.textContent = msg.username;
@@ -213,6 +231,16 @@ app.get("/overlay", (_req, res) => {
     wrapper.appendChild(content);
 
     document.getElementById("messages").prepend(wrapper);
+
+    /* -----------------------------------------
+       NEW: Auto-remove message after 45 seconds
+       - Add fadeOut class at 45s
+       - Remove element at 45.5s
+    ----------------------------------------- */
+    setTimeout(() => {
+      wrapper.classList.add("fadeOut");
+      setTimeout(() => wrapper.remove(), 500);
+    }, 45000);
   };
 </script>
 </body>
