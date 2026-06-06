@@ -90,17 +90,19 @@ async function startBrowser() {
   });
 
   // ------------------------------
-  // UPDATED OBSERVER FOR BEAM v2
+  // CORRECT OBSERVER FOR BEAM v2
   // ------------------------------
   await page.evaluate(() => {
+    const selector = 'div[typeof="ChatMessage"], div[typeof="ChatMessageExternal"]';
+
     const observer = new MutationObserver(() => {
-      const messages = [...document.querySelectorAll("[data-testid='chat-message']")];
+      const messages = [...document.querySelectorAll(selector)];
       const last = messages[messages.length - 1];
       if (!last) return;
 
-      const username = last.querySelector("[data-testid='chat-username']")?.innerText || "";
-      const text = last.querySelector("[data-testid='chat-text']")?.innerText || "";
-      const avatar = last.querySelector("[data-testid='chat-avatar']")?.src || null;
+      const username = last.querySelector('[property="sender.name"]')?.innerText?.trim() || "";
+      const text = last.querySelector('[property="body"]')?.innerText?.trim() || "";
+      const avatar = last.querySelector('[property="avatar"]')?.src || null;
 
       if (username && text) {
         window.relayMessage({
