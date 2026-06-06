@@ -49,21 +49,17 @@ async function startBrowser() {
 
   console.log("Injecting message observer…");
 
-  // ---------------------------------------------------------
   // Expose relay function so browser → Node → overlay
-  // ---------------------------------------------------------
   await page.exposeFunction("relayMessage", (msg) => {
     console.log("New chat message:", msg);
     broadcast(msg);
   });
 
-  // ---------------------------------------------------------
   // MutationObserver extracts:
   // - username
   // - text
   // - avatar
-  // - username color
-  // ---------------------------------------------------------
+  // - username color (computed)
   await page.evaluate(() => {
     const observer = new MutationObserver((mutations) => {
       for (const m of mutations) {
@@ -80,8 +76,10 @@ async function startBrowser() {
             const text = textEl?.innerText.trim();
             const avatar = avatarEl?.src || null;
 
-            // Beam colored name
-            const color = usernameEl?.style?.color || null;
+            // ⭐ FIXED: Always get the REAL Beam color
+            const color = usernameEl
+              ? window.getComputedStyle(usernameEl).color
+              : "white";
 
             if (username && text) {
               window.relayMessage({ username, text, avatar, color });
@@ -127,10 +125,6 @@ app.get("/overlay", (_req, res) => {
     gap: 14px;
   }
 
-  /* -----------------------------------------
-     UPDATED: Slower fade-in (0.8s)
-     UPDATED: Background rgba(0,0,0,1)
-  ----------------------------------------- */
   .msg {
     display: flex;
     align-items: flex-start;
@@ -163,9 +157,6 @@ app.get("/overlay", (_req, res) => {
     margin-bottom: 4px;
   }
 
-  /* -----------------------------------------
-     UPDATED: Slower fade-out (1.2s)
-  ----------------------------------------- */
   .fadeOut {
     animation: fadeOut 1.2s forwards;
   }
@@ -217,9 +208,6 @@ app.get("/overlay", (_req, res) => {
 
     document.getElementById("messages").prepend(wrapper);
 
-    // -----------------------------------------
-    // Auto-remove after 45 seconds
-    // -----------------------------------------
     setTimeout(() => {
       wrapper.classList.add("fadeOut");
       setTimeout(() => wrapper.remove(), 1200);
