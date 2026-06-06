@@ -127,6 +127,10 @@ app.get("/overlay", (_req, res) => {
     gap: 14px;
   }
 
+  /* -----------------------------------------
+     UPDATED: Slower fade-in (0.8s)
+     UPDATED: Background rgba(0,0,0,1)
+  ----------------------------------------- */
   .msg {
     display: flex;
     align-items: flex-start;
@@ -138,7 +142,7 @@ app.get("/overlay", (_req, res) => {
     font-size: 22px;
     max-width: 80%;
     backdrop-filter: blur(6px);
-    animation: fadeIn 0.3s ease-out;
+    animation: fadeIn 0.8s ease-out;
   }
 
   .avatar {
@@ -159,18 +163,21 @@ app.get("/overlay", (_req, res) => {
     margin-bottom: 4px;
   }
 
+  /* -----------------------------------------
+     UPDATED: Slower fade-out (1.2s)
+  ----------------------------------------- */
   .fadeOut {
-    animation: fadeOut 0.5s forwards;
+    animation: fadeOut 1.2s forwards;
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
   @keyframes fadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; transform: translateY(-10px); }
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-20px); }
   }
 </style>
 </head>
@@ -178,60 +185,3 @@ app.get("/overlay", (_req, res) => {
 <div id="messages"></div>
 
 <script>
-  const ws = new WebSocket("wss://" + location.host);
-
-  ws.onmessage = (event) => {
-    const msg = JSON.parse(event.data);
-
-    const wrapper = document.createElement("div");
-    wrapper.className = "msg";
-
-    if (msg.avatar) {
-      const img = document.createElement("img");
-      img.className = "avatar";
-      img.src = msg.avatar;
-      wrapper.appendChild(img);
-    }
-
-    const content = document.createElement("div");
-    content.className = "content";
-
-    const name = document.createElement("div");
-    name.className = "username";
-    name.textContent = msg.username;
-    name.style.color = msg.color || "white";
-    content.appendChild(name);
-
-    const text = document.createElement("div");
-    text.textContent = msg.text;
-    content.appendChild(text);
-
-    wrapper.appendChild(content);
-
-    document.getElementById("messages").prepend(wrapper);
-
-    setTimeout(() => {
-      wrapper.classList.add("fadeOut");
-      setTimeout(() => wrapper.remove(), 500);
-    }, 45000);
-  };
-</script>
-</body>
-</html>`);
-});
-
-// ------------------------------
-// HTTP + WebSocket upgrade
-// ------------------------------
-const server = app.listen(port, () => {
-  console.log("Server listening on " + port);
-  startBrowser().catch((err) => {
-    console.error("Browser failed to start:", err);
-  });
-});
-
-server.on("upgrade", (req, socket, head) => {
-  wss.handleUpgrade(req, socket, head, (ws) => {
-    wss.emit("connection", ws, req);
-  });
-});
