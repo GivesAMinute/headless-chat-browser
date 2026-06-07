@@ -70,6 +70,7 @@
   .bubble video {
     display: block;
     margin-top: 6px;
+    max-height: 140px; /* original size */
   }
 
   .fadeOut {
@@ -151,33 +152,13 @@
     const text = document.createElement("div");
     text.innerHTML = msg.html;
 
-    /* ⭐ FINAL FIX — ONLY scale stickers, NEVER touch emotes */
+    /* ORIGINAL — no scaling, no wrapping, no DOM mutation */
     text.querySelectorAll("video").forEach(v => {
       v.muted = true;
       v.autoplay = true;
       v.loop = true;
       v.playsInline = true;
-
-      const scaleSticker = () => {
-        const outer = document.createElement("span");
-        outer.style.display = "inline-block";
-        outer.style.transform = "scale(0.5)";
-        outer.style.transformOrigin = "top left";
-
-        v.style.transform = "scale(2)";
-        v.style.transformOrigin = "top left";
-
-        v.parentNode.insertBefore(outer, v);
-        outer.appendChild(v);
-
-        v.play().catch(() => {});
-      };
-
-      if (v.readyState >= 1) {
-        scaleSticker();
-      } else {
-        v.addEventListener("loadedmetadata", scaleSticker, { once: true });
-      }
+      v.play().catch(() => {});
     });
 
     content.appendChild(text);
