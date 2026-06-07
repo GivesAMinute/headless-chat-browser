@@ -39,7 +39,7 @@ async function startBrowser() {
       "--disable-gpu",
       "--disable-software-rasterizer",
 
-      // ⭐ Allow Beam stickers (video) to autoplay
+      // ⭐ Required for Beam sticker autoplay
       "--autoplay-policy=no-user-gesture-required"
     ]
   });
@@ -104,10 +104,13 @@ async function startBrowser() {
         stickerHTML = sticker.outerHTML;
       }
 
-      // ⭐ Upgrade Twitch static emotes → animated emotes
-      // Example static: https://static-cdn.jtvnw.net/emoticons/v1/<ID>/1.0
-      // Convert to:     https://static-cdn.jtvnw.net/emoticons/v2/<ID>/animated/light/3.0
-      // (3.0 = double size compared to 1.0)
+      // ⭐ Twitch static → v2 static (double size)
+      html = html.replace(
+        /https:\/\/static-cdn\.jtvnw\.net\/emoticons\/v1\/([^\/]+)\/1\.0/g,
+        "https://static-cdn.jtvnw.net/emoticons/v2/$1/static/light/3.0"
+      );
+
+      // ⭐ Twitch static → v2 animated (double size)
       html = html.replace(
         /https:\/\/static-cdn\.jtvnw\.net\/emoticons\/v1\/([^\/]+)\/1\.0/g,
         "https://static-cdn.jtvnw.net/emoticons/v2/$1/animated/light/3.0"

@@ -67,10 +67,10 @@
     max-height: 80px;
   }
 
-  /* ⭐ Sticker video styling */
+  /* ⭐ Remove height limits so transform scaling works */
   .bubble video {
-    max-height: 140px;
-    border-radius: 12px;
+    max-height: none;
+    display: block;
     margin-top: 6px;
   }
 
@@ -153,14 +153,17 @@
     const text = document.createElement("div");
     text.innerHTML = msg.html;
 
-    /* ⭐ NEW: Force Beam stickers (video) to autoplay */
+    /* ⭐ Beam sticker autoplay + double-size scaling */
     text.querySelectorAll("video").forEach(v => {
-      v.muted = true;        // required for autoplay
+      v.muted = true;
       v.autoplay = true;
       v.loop = true;
       v.playsInline = true;
 
-      // Try to start playback
+      // ⭐ Double-size pilled stickers
+      v.style.transform = "scale(2)";
+      v.style.transformOrigin = "top left";
+
       v.play().catch(() => {});
     });
 
