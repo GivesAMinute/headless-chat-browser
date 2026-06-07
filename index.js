@@ -123,7 +123,7 @@ async function startBeamChat() {
 }
 
 /* ---------------------------------------------------------
-   TWITCH CHAT SCRAPER (CLEANEST POSSIBLE VERSION)
+   TWITCH CHAT SCRAPER (FILTERS NON-EMOTE IMAGES)
 --------------------------------------------------------- */
 async function startTwitchChat() {
   console.log("Starting Twitch chat scraper…");
@@ -168,7 +168,6 @@ async function startTwitchChat() {
           (b) => b.querySelector("img")?.src
         );
 
-        // ⭐ Build message ONLY from real fragments + emotes
         const container =
           last.querySelector(".message") || last;
 
@@ -181,19 +180,32 @@ async function startTwitchChat() {
 
           if (parts.length > 0) {
             html = parts
-              .map((el) => el.outerHTML || el.textContent || "")
+              .map((el) => {
+                // Keep text fragments as-is
+                if (el.classList.contains("text-fragment")) {
+                  return el.outerHTML || el.textContent || "";
+                }
+
+                // For chat-image (emotes), only keep if underlying <img> has non-empty alt
+                if (el.classList.contains("chat-image")) {
+                  const img = el.querySelector("img") || el;
+                  const alt = (img.getAttribute("alt") || "").trim();
+
+                  if (!alt) {
+                    // Likely a reply icon / UI image — skip it
+                    return "";
+                  }
+
+                  return el.outerHTML || "";
+                }
+
+                return "";
+              })
               .join("");
           } else {
             html = container.innerHTML || "";
           }
         }
-
-        // ⭐ Remove reply arrows, broken icons, hidden metadata
-        html = html
-          .replace(/<img[^>]*reply[^>]*>/gi, "")
-          .replace(/<button.*?<\/button>/gi, "")
-          .replace(/<svg.*?<\/svg>/gi, "")
-          .replace(/<span[^>]*data-test-selector="reply-button"[^>]*>.*?<\/span>/gi, "");
 
         window.relayTwitch({
           username,
