@@ -123,7 +123,8 @@ async function startBeamChat() {
 }
 
 /* ---------------------------------------------------------
-   TWITCH CHAT SCRAPER (FILTERS NON-EMOTE IMAGES)
+   TWITCH CHAT SCRAPER — FINAL FIX
+   Only capture nodes that contain REAL message content
 --------------------------------------------------------- */
 async function startTwitchChat() {
   console.log("Starting Twitch chat scraper…");
@@ -156,6 +157,15 @@ async function startTwitchChat() {
         const last = lines[lines.length - 1];
         if (!last) return;
 
+        // ⭐ IGNORE nodes that contain no real message content
+        const hasFragments =
+          last.querySelector(".text-fragment") ||
+          last.querySelector(".chat-image");
+
+        if (!hasFragments) {
+          return; // <-- THIS is the fix for duplicates
+        }
+
         const username =
           last.querySelector(".chat-author__display-name")?.innerText?.trim() ||
           "Unknown";
@@ -178,33 +188,22 @@ async function startTwitchChat() {
             ...container.querySelectorAll(".text-fragment, .chat-image")
           ];
 
-          if (parts.length > 0) {
-            html = parts
-              .map((el) => {
-                // Keep text fragments as-is
-                if (el.classList.contains("text-fragment")) {
-                  return el.outerHTML || el.textContent || "";
-                }
+          html = parts
+            .map((el) => {
+              if (el.classList.contains("text-fragment")) {
+                return el.outerHTML || el.textContent || "";
+              }
 
-                // For chat-image (emotes), only keep if underlying <img> has non-empty alt
-                if (el.classList.contains("chat-image")) {
-                  const img = el.querySelector("img") || el;
-                  const alt = (img.getAttribute("alt") || "").trim();
+              if (el.classList.contains("chat-image")) {
+                const img = el.querySelector("img") || el;
+                const alt = (img.getAttribute("alt") || "").trim();
+                if (!alt) return ""; // skip UI icons
+                return el.outerHTML || "";
+              }
 
-                  if (!alt) {
-                    // Likely a reply icon / UI image — skip it
-                    return "";
-                  }
-
-                  return el.outerHTML || "";
-                }
-
-                return "";
-              })
-              .join("");
-          } else {
-            html = container.innerHTML || "";
-          }
+              return "";
+            })
+            .join("");
         }
 
         window.relayTwitch({
@@ -213,7 +212,7 @@ async function startTwitchChat() {
           avatar,
           badges
         });
-      }, 150); // wait for final DOM patch
+      }, 120);
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
