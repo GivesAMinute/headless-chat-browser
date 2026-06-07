@@ -123,7 +123,7 @@ async function startBeamChat() {
 }
 
 /* ---------------------------------------------------------
-   TWITCH CHAT SCRAPER (CLEAN, NO DUPES, ANIMATED)
+   TWITCH CHAT SCRAPER (CLEANEST POSSIBLE VERSION)
 --------------------------------------------------------- */
 async function startTwitchChat() {
   console.log("Starting Twitch chat scraper…");
@@ -168,14 +168,16 @@ async function startTwitchChat() {
           (b) => b.querySelector("img")?.src
         );
 
-        // Build message HTML ONLY from actual message fragments + emotes
+        // ⭐ Build message ONLY from real fragments + emotes
         const container =
           last.querySelector(".message") || last;
 
         let html = "";
 
         if (container) {
-          const parts = [...container.querySelectorAll(".text-fragment, .chat-image")];
+          const parts = [
+            ...container.querySelectorAll(".text-fragment, .chat-image")
+          ];
 
           if (parts.length > 0) {
             html = parts
@@ -186,13 +188,20 @@ async function startTwitchChat() {
           }
         }
 
+        // ⭐ Remove reply arrows, broken icons, hidden metadata
+        html = html
+          .replace(/<img[^>]*reply[^>]*>/gi, "")
+          .replace(/<button.*?<\/button>/gi, "")
+          .replace(/<svg.*?<\/svg>/gi, "")
+          .replace(/<span[^>]*data-test-selector="reply-button"[^>]*>.*?<\/span>/gi, "");
+
         window.relayTwitch({
           username,
           html,
           avatar,
           badges
         });
-      }, 150); // wait for final DOM patch (badges + animated emotes)
+      }, 150); // wait for final DOM patch
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
