@@ -29,6 +29,7 @@ function broadcast(msg) {
 
 /* ---------------------------------------------------------
    BEAM CHAT SCRAPER — ALLOW EVERYTHING EXCEPT TWITCH
+   + VELORA BADGES SUPPORT
 --------------------------------------------------------- */
 async function startBeamChat() {
   console.log("Launching headless browser…");
@@ -100,9 +101,12 @@ async function startBeamChat() {
       const avatar =
         last.querySelector('[property="avatar"]')?.src || null;
 
-      const badges = [...last.querySelectorAll('[property="badge"]')].map(
-        (b) => b.src
-      );
+      // ⭐ VELORA BADGES + BEAM BADGES + ANY OTHER BADGES
+      const badges = [
+        ...last.querySelectorAll('[property="badge"]'),
+        ...last.querySelectorAll('img[class*="badge"]'),
+        ...last.querySelectorAll('img[data-badge]')
+      ].map(b => b.src);
 
       let stickerHTML = "";
       const sticker = last.querySelector("video");
@@ -138,7 +142,6 @@ async function startTwitchChat() {
     { waitUntil: "networkidle2" }
   );
 
-  // ⭐ Per-user pending messages: username -> { timer, msg }
   const pendingByUser = new Map();
 
   await twitchPage.exposeFunction("relayTwitch", (msg) => {
@@ -162,7 +165,7 @@ async function startTwitchChat() {
       console.log("TWITCH → FINAL MESSAGE SENT:", payload);
       broadcast(payload);
       pendingByUser.delete(key);
-    }, 500); // buffer to allow Twitch to patch emotes
+    }, 500);
 
     pendingByUser.set(key, { timer, msg: payload });
   });
