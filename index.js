@@ -37,7 +37,10 @@ async function startBrowser() {
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       "--disable-gpu",
-      "--disable-software-rasterizer"
+      "--disable-software-rasterizer",
+
+      // ⭐ NEW: Allow Beam stickers (video) to autoplay
+      "--autoplay-policy=no-user-gesture-required"
     ]
   });
 
