@@ -63,13 +63,10 @@
     height: 20px;
   }
 
-  /* ⭐ Twitch emotes must NOT be transformed */
-  .emote-container img {
+  .bubble img {
     max-height: 80px;
-    image-rendering: auto;
   }
 
-  /* ⭐ Stickers need no max-height so scaling works */
   .bubble video {
     display: block;
     margin-top: 6px;
@@ -154,16 +151,7 @@
     const text = document.createElement("div");
     text.innerHTML = msg.html;
 
-    /* ⭐ STEP 1 — Isolate Twitch emotes into a transform‑free container */
-    const emoteContainer = document.createElement("span");
-    emoteContainer.className = "emote-container";
-
-    text.querySelectorAll("img").forEach(img => {
-      // Move emotes into safe container
-      emoteContainer.appendChild(img);
-    });
-
-    /* ⭐ STEP 2 — Metadata‑aware sticker scaling */
+    /* ⭐ FINAL FIX — ONLY scale stickers, NEVER touch emotes */
     text.querySelectorAll("video").forEach(v => {
       v.muted = true;
       v.autoplay = true;
@@ -171,7 +159,7 @@
       v.playsInline = true;
 
       const scaleSticker = () => {
-        const outer = document.createElement("div");
+        const outer = document.createElement("span");
         outer.style.display = "inline-block";
         outer.style.transform = "scale(0.5)";
         outer.style.transformOrigin = "top left";
@@ -179,8 +167,7 @@
         v.style.transform = "scale(2)";
         v.style.transformOrigin = "top left";
 
-        const parent = v.parentNode;
-        parent.insertBefore(outer, v);
+        v.parentNode.insertBefore(outer, v);
         outer.appendChild(v);
 
         v.play().catch(() => {});
@@ -193,12 +180,7 @@
       }
     });
 
-    /* ⭐ Rebuild message content in correct order */
-    const finalLine = document.createElement("div");
-    finalLine.appendChild(emoteContainer);
-    finalLine.appendChild(text);
-
-    content.appendChild(finalLine);
+    content.appendChild(text);
 
     bubble.appendChild(content);
     wrapper.appendChild(bubble);
