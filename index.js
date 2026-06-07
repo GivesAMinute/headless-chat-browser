@@ -39,7 +39,7 @@ async function startBrowser() {
       "--disable-gpu",
       "--disable-software-rasterizer",
 
-      // ⭐ NEW: Allow Beam stickers (video) to autoplay
+      // ⭐ Allow Beam stickers (video) to autoplay
       "--autoplay-policy=no-user-gesture-required"
     ]
   });
@@ -87,7 +87,7 @@ async function startBrowser() {
       const username =
         last.querySelector('[property="sender.name"]')?.innerText?.trim() || "";
 
-      const html =
+      let html =
         last.querySelector('[property="body"]')?.innerHTML || "";
 
       const avatar =
@@ -97,12 +97,21 @@ async function startBrowser() {
         (b) => b.src
       );
 
-      // ⭐ NEW: Capture Beam stickers (video elements)
+      // ⭐ Capture Beam stickers (video elements)
       let stickerHTML = "";
       const sticker = last.querySelector("video");
       if (sticker) {
         stickerHTML = sticker.outerHTML;
       }
+
+      // ⭐ Upgrade Twitch static emotes → animated emotes
+      // Example static: https://static-cdn.jtvnw.net/emoticons/v1/<ID>/1.0
+      // Convert to:     https://static-cdn.jtvnw.net/emoticons/v2/<ID>/animated/light/3.0
+      // (3.0 = double size compared to 1.0)
+      html = html.replace(
+        /https:\/\/static-cdn\.jtvnw\.net\/emoticons\/v1\/([^\/]+)\/1\.0/g,
+        "https://static-cdn.jtvnw.net/emoticons/v2/$1/animated/light/3.0"
+      );
 
       let platform =
         last.querySelector('[property="service"]')?.getAttribute("value") ||
@@ -111,7 +120,7 @@ async function startBrowser() {
       window.relayMessage({
         platform,
         username,
-        html: html + stickerHTML, // ⭐ merge sticker into message
+        html: html + stickerHTML,
         avatar,
         badges
       });
