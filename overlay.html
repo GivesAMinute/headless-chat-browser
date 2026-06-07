@@ -67,9 +67,8 @@
     max-height: 80px;
   }
 
-  /* ⭐ Remove height limits so transform scaling works */
+  /* ⭐ No max-height so wrapper scaling works cleanly */
   .bubble video {
-    max-height: none;
     display: block;
     margin-top: 6px;
   }
@@ -153,16 +152,26 @@
     const text = document.createElement("div");
     text.innerHTML = msg.html;
 
-    /* ⭐ Beam sticker autoplay + double-size scaling */
+    /* ⭐ Wrapper‑based sticker scaling (correct fix) */
     text.querySelectorAll("video").forEach(v => {
       v.muted = true;
       v.autoplay = true;
       v.loop = true;
       v.playsInline = true;
 
-      // ⭐ Double-size pilled stickers
+      // Create wrapper to shrink layout footprint
+      const w = document.createElement("div");
+      w.style.display = "inline-block";
+      w.style.transform = "scale(0.5)";
+      w.style.transformOrigin = "top left";
+
+      // Scale sticker visually
       v.style.transform = "scale(2)";
       v.style.transformOrigin = "top left";
+
+      // Insert wrapper
+      v.parentNode.insertBefore(w, v);
+      w.appendChild(v);
 
       v.play().catch(() => {});
     });
