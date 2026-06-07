@@ -123,7 +123,7 @@ async function startBeamChat() {
 }
 
 /* ---------------------------------------------------------
-   TWITCH CHAT SCRAPER (ANIMATED EMOTES)
+   TWITCH CHAT SCRAPER (ANIMATED EMOTES, NO DUPLICATES)
 --------------------------------------------------------- */
 async function startTwitchChat() {
   console.log("Starting Twitch chat scraper…");
@@ -139,20 +139,23 @@ async function startTwitchChat() {
     broadcast({
       platform: "twitch",
       username: msg.username,
-      html: msg.html,   // includes animated emotes
+      html: msg.html,
       avatar: msg.avatar,
       badges: msg.badges
     });
   });
 
   await twitchPage.evaluate(() => {
-    const observer = new MutationObserver(() => {
-      const lines = [...document.querySelectorAll(".chat-line__message")];
-      const last = lines[lines.length - 1];
-      if (!last) return;
+    let twitchDebounce = null;
 
-      // ⭐ Wait for Twitch to finish patching the message (animated emotes)
-      setTimeout(() => {
+    const observer = new MutationObserver(() => {
+      clearTimeout(twitchDebounce);
+
+      twitchDebounce = setTimeout(() => {
+        const lines = [...document.querySelectorAll(".chat-line__message")];
+        const last = lines[lines.length - 1];
+        if (!last) return;
+
         const username =
           last.querySelector(".chat-author__display-name")?.innerText?.trim() ||
           "Unknown";
@@ -165,10 +168,19 @@ async function startTwitchChat() {
           (b) => b.querySelector("img")?.src
         );
 
-        const html =
+        // ⭐ Always grab the FINAL patched HTML
+        let html =
           last.querySelector(".message")?.innerHTML ||
           last.innerHTML ||
           "";
+
+        // ⭐ Strip Twitch wrapper junk
+        html = html
+          .replace(/<span class="chat-line__message--emote-button".*?<\/span>/g, "")
+          .replace(/<span data-test-selector="emote-button".*?<\/span>/g, "")
+          .replace(/<button.*?<\/button>/g, "")
+          .replace(/<div class="chat-line__status".*?<\/div>/g, "")
+          .replace(/<span class="mention-fragment".*?<\/span>/g, "");
 
         window.relayTwitch({
           username,
@@ -176,7 +188,7 @@ async function startTwitchChat() {
           avatar,
           badges
         });
-      }, 50); // ⭐ ensures animated emotes are included
+      }, 120); // ⭐ ensures ALL Twitch patches are complete
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
