@@ -94,6 +94,13 @@ async function startBrowser() {
         (b) => b.src
       );
 
+      // ⭐ NEW: Capture Beam stickers (video elements)
+      let stickerHTML = "";
+      const sticker = last.querySelector("video");
+      if (sticker) {
+        stickerHTML = sticker.outerHTML;
+      }
+
       let platform =
         last.querySelector('[property="service"]')?.getAttribute("value") ||
         "beam";
@@ -101,7 +108,7 @@ async function startBrowser() {
       window.relayMessage({
         platform,
         username,
-        html,
+        html: html + stickerHTML, // ⭐ merge sticker into message
         avatar,
         badges
       });
