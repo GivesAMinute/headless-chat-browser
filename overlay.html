@@ -63,15 +63,14 @@
     height: 20px;
   }
 
-  /* ⭐ Proper 2× Twitch emotes — no overflow */
+  /* ⭐ Proper 2× Twitch emotes */
   .bubble img.chat-image {
-    width: 64px;   /* Twitch default is 32px → double it */
+    width: 64px;
     height: 64px;
     display: inline-block;
     vertical-align: middle;
   }
 
-  /* Normal images (Beam stickers, avatars) */
   .bubble img:not(.chat-image) {
     max-height: 80px;
   }
@@ -102,6 +101,7 @@
 <div id="messages"></div>
 
 <script>
+  // ⭐ Prevent duplicate WebSocket connections
   if (window.__CHAT_OVERLAY_CONNECTED__) {
     console.log("Overlay already connected, skipping duplicate WS");
     throw new Error("Duplicate overlay instance");
@@ -109,6 +109,45 @@
   window.__CHAT_OVERLAY_CONNECTED__ = true;
 
   const ws = new WebSocket("wss://" + location.host);
+
+  // ⭐ Platform → icon filename mapping (matches your PNGs exactly)
+  const PLATFORM_MAP = {
+    youtube: "youtube",
+    "youtube.com": "youtube",
+    yt: "youtube",
+
+    velora: "velora",
+    "velora.live": "velora",
+
+    pilled: "pilled",
+    "pilled.net": "pilled",
+
+    nimotv: "nimotv",
+    nimo: "nimotv",
+
+    kick: "kick",
+    "kick.com": "kick",
+
+    rumble: "rumble",
+    odysee: "odysee",
+    arena: "arena",
+    blaze: "blaze",
+    bitchute: "bitchute",
+    vpzone: "vpzone",
+
+    twitch: "twitch", // Twitch still uses icon (Beam avatar only for Beam)
+    beam: null        // ⭐ Beam uses avatar, NOT icon
+  };
+
+  function getPlatformIcon(platform) {
+    platform = platform.toLowerCase();
+    const mapped = PLATFORM_MAP[platform];
+
+    if (mapped === null) return null; // Beam → no icon
+    if (mapped) return `/icons/${mapped}.png`;
+
+    return `/icons/default.png`; // fallback
+  }
 
   function colorForUsername(name) {
     let hash = 0;
@@ -125,17 +164,21 @@
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
 
+    // ⭐ Beam uses avatar (never icon)
     if (msg.platform === "beam" && msg.avatar) {
       const img = document.createElement("img");
       img.className = "avatar";
       img.src = msg.avatar;
       wrapper.appendChild(img);
     } else {
-      const icon = document.createElement("img");
-      icon.className = "platform-icon";
-      icon.src = `/icons/${msg.platform}.png`;
-      icon.onerror = () => icon.remove();
-      wrapper.appendChild(icon);
+      const iconPath = getPlatformIcon(msg.platform);
+      if (iconPath) {
+        const icon = document.createElement("img");
+        icon.className = "platform-icon";
+        icon.src = iconPath;
+        icon.onerror = () => icon.remove();
+        wrapper.appendChild(icon);
+      }
     }
 
     const bubble = document.createElement("div");
