@@ -31,13 +31,7 @@
     gap: 10px;
   }
 
-  .platform-icon {
-    width: 26px;
-    height: 26px;
-    margin-top: 6px;
-    flex-shrink: 0;
-  }
-
+  .platform-icon,
   .avatar {
     width: 40px;
     height: 40px;
@@ -86,13 +80,6 @@
 <script>
   const ws = new WebSocket("wss://" + location.host);
 
-  function avatarFor(msg) {
-    if (msg.platform === "beam" && msg.avatar) {
-      return msg.avatar;
-    }
-    return `/icons/${msg.platform}.png`;
-  }
-
   function colorForUsername(name) {
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
@@ -108,15 +95,19 @@
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
 
-    const icon = document.createElement("img");
-    icon.className = "platform-icon";
-    icon.src = `/icons/${msg.platform}.png`;
-    wrapper.appendChild(icon);
-
-    const img = document.createElement("img");
-    img.className = "avatar";
-    img.src = avatarFor(msg);
-    wrapper.appendChild(img);
+    // Beam: show real avatar only
+    // Others: show platform icon only
+    if (msg.platform === "beam" && msg.avatar) {
+      const img = document.createElement("img");
+      img.className = "avatar";
+      img.src = msg.avatar;
+      wrapper.appendChild(img);
+    } else {
+      const icon = document.createElement("img");
+      icon.className = "platform-icon";
+      icon.src = `/icons/${msg.platform}.png`;
+      wrapper.appendChild(icon);
+    }
 
     const bubble = document.createElement("div");
     bubble.className = "bubble";
