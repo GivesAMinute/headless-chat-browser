@@ -70,7 +70,7 @@
   .bubble video {
     display: block;
     margin-top: 6px;
-    max-height: 140px; /* original size */
+    max-height: 140px;
   }
 
   .fadeOut {
@@ -104,12 +104,24 @@
     return "hsl(" + hue + ", 70%, 60%)";
   }
 
+  // ⭐ Cache to prevent double-render
+  let lastMessageKey = null;
+
   ws.onmessage = (event) => {
     const msg = JSON.parse(event.data);
+
+    // ⭐ Build a unique key for dedupe
+    const key = msg.platform + "|" + msg.username + "|" + msg.html;
+
+    if (key === lastMessageKey) {
+      return; // ignore duplicate render
+    }
+    lastMessageKey = key;
 
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
 
+    // ⭐ Beam uses avatar, all others use platform icon
     if (msg.platform === "beam" && msg.avatar) {
       const img = document.createElement("img");
       img.className = "avatar";
@@ -118,7 +130,15 @@
     } else {
       const icon = document.createElement("img");
       icon.className = "platform-icon";
-      icon.src = `/icons/${msg.platform}.png`;
+
+      // ⭐ Only load icon if it exists
+      const iconPath = `/icons/${msg.platform}.png`;
+      icon.src = iconPath;
+
+      icon.onerror = () => {
+        icon.remove(); // remove broken icon entirely
+      };
+
       wrapper.appendChild(icon);
     }
 
@@ -135,6 +155,7 @@
       badgeRow.style.gap = "4px";
 
       msg.badges.forEach(src => {
+        if (!src) return;
         const badge = document.createElement("img");
         badge.src = src;
         badgeRow.appendChild(badge);
@@ -152,7 +173,6 @@
     const text = document.createElement("div");
     text.innerHTML = msg.html;
 
-    /* ORIGINAL — no scaling, no wrapping, no DOM mutation */
     text.querySelectorAll("video").forEach(v => {
       v.muted = true;
       v.autoplay = true;
