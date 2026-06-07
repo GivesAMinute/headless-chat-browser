@@ -19,11 +19,8 @@
     bottom: 0;
     width: 100%;
     padding: 20px;
-
-    /* ⭐ FIX: remove column-reverse */
     display: flex;
     flex-direction: column;
-
     gap: 12px;
     align-items: flex-start;
   }
@@ -66,7 +63,15 @@
     height: 20px;
   }
 
-  .bubble img {
+  /* ⭐ Twitch emotes 2× size */
+  .bubble img.chat-image {
+    transform: scale(2);
+    transform-origin: top left;
+    display: inline-block;
+  }
+
+  /* Normal images (Beam stickers, avatars) */
+  .bubble img:not(.chat-image) {
     max-height: 80px;
   }
 
@@ -96,6 +101,13 @@
 <div id="messages"></div>
 
 <script>
+  // ⭐ Prevent duplicate WebSocket connections
+  if (window.__CHAT_OVERLAY_CONNECTED__) {
+    console.log("Overlay already connected, skipping duplicate WS");
+    throw new Error("Duplicate overlay instance");
+  }
+  window.__CHAT_OVERLAY_CONNECTED__ = true;
+
   const ws = new WebSocket("wss://" + location.host);
 
   function colorForUsername(name) {
@@ -107,35 +119,22 @@
     return "hsl(" + hue + ", 70%, 60%)";
   }
 
-  // ⭐ Prevent double-render
-  let lastMessageKey = null;
-
   ws.onmessage = (event) => {
     const msg = JSON.parse(event.data);
-
-    // ⭐ Unique dedupe key
-    const key = msg.platform + "|" + msg.username + "|" + msg.html;
-    if (key === lastMessageKey) return;
-    lastMessageKey = key;
 
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
 
-    // ⭐ Beam uses avatar
     if (msg.platform === "beam" && msg.avatar) {
       const img = document.createElement("img");
       img.className = "avatar";
       img.src = msg.avatar;
       wrapper.appendChild(img);
     } else {
-      // ⭐ Other platforms use icons
       const icon = document.createElement("img");
       icon.className = "platform-icon";
       icon.src = `/icons/${msg.platform}.png`;
-
-      // ⭐ Remove broken icons
       icon.onerror = () => icon.remove();
-
       wrapper.appendChild(icon);
     }
 
@@ -183,7 +182,6 @@
     bubble.appendChild(content);
     wrapper.appendChild(bubble);
 
-    // ⭐ FIX: append instead of prepend
     document.getElementById("messages").appendChild(wrapper);
 
     setTimeout(() => {
