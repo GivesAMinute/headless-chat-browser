@@ -123,7 +123,7 @@ async function startBeamChat() {
 }
 
 /* ---------------------------------------------------------
-   TWITCH CHAT SCRAPER (ANIMATED EMOTES, NO DUPLICATES)
+   TWITCH CHAT SCRAPER (CLEAN, NO DUPES, ANIMATED)
 --------------------------------------------------------- */
 async function startTwitchChat() {
   console.log("Starting Twitch chat scraper…");
@@ -168,19 +168,23 @@ async function startTwitchChat() {
           (b) => b.querySelector("img")?.src
         );
 
-        // ⭐ Always grab the FINAL patched HTML
-        let html =
-          last.querySelector(".message")?.innerHTML ||
-          last.innerHTML ||
-          "";
+        // Build message HTML ONLY from actual message fragments + emotes
+        const container =
+          last.querySelector(".message") || last;
 
-        // ⭐ Strip Twitch wrapper junk
-        html = html
-          .replace(/<span class="chat-line__message--emote-button".*?<\/span>/g, "")
-          .replace(/<span data-test-selector="emote-button".*?<\/span>/g, "")
-          .replace(/<button.*?<\/button>/g, "")
-          .replace(/<div class="chat-line__status".*?<\/div>/g, "")
-          .replace(/<span class="mention-fragment".*?<\/span>/g, "");
+        let html = "";
+
+        if (container) {
+          const parts = [...container.querySelectorAll(".text-fragment, .chat-image")];
+
+          if (parts.length > 0) {
+            html = parts
+              .map((el) => el.outerHTML || el.textContent || "")
+              .join("");
+          } else {
+            html = container.innerHTML || "";
+          }
+        }
 
         window.relayTwitch({
           username,
@@ -188,7 +192,7 @@ async function startTwitchChat() {
           avatar,
           badges
         });
-      }, 120); // ⭐ ensures ALL Twitch patches are complete
+      }, 150); // wait for final DOM patch (badges + animated emotes)
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
