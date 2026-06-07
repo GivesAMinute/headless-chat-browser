@@ -56,14 +56,17 @@
   .username {
     font-weight: 600;
     margin-bottom: 4px;
+    display: inline-block;
   }
 
-  .badge-row img {
-    width: 20px;
-    height: 20px;
+  .velora-inline-badge {
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+    vertical-align: middle;
+    display: inline-block;
   }
 
-  /* ⭐ Proper 2× Twitch emotes */
   .bubble img.chat-image {
     width: 64px;
     height: 64px;
@@ -101,7 +104,6 @@
 <div id="messages"></div>
 
 <script>
-  // ⭐ Prevent duplicate WebSocket connections
   if (window.__CHAT_OVERLAY_CONNECTED__) {
     console.log("Overlay already connected, skipping duplicate WS");
     throw new Error("Duplicate overlay instance");
@@ -110,7 +112,6 @@
 
   const ws = new WebSocket("wss://" + location.host);
 
-  // ⭐ Platform → icon filename mapping (matches your PNGs exactly)
   const PLATFORM_MAP = {
     youtube: "youtube",
     "youtube.com": "youtube",
@@ -135,18 +136,16 @@
     bitchute: "bitchute",
     vpzone: "vpzone",
 
-    twitch: "twitch", // Twitch still uses icon (Beam avatar only for Beam)
-    beam: null        // ⭐ Beam uses avatar, NOT icon
+    twitch: "twitch",
+    beam: null
   };
 
   function getPlatformIcon(platform) {
     platform = platform.toLowerCase();
     const mapped = PLATFORM_MAP[platform];
-
-    if (mapped === null) return null; // Beam → no icon
+    if (mapped === null) return null;
     if (mapped) return `/icons/${mapped}.png`;
-
-    return `/icons/default.png`; // fallback
+    return `/icons/default.png`;
   }
 
   function colorForUsername(name) {
@@ -164,7 +163,6 @@
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
 
-    // ⭐ Beam uses avatar (never icon)
     if (msg.platform === "beam" && msg.avatar) {
       const img = document.createElement("img");
       img.className = "avatar";
@@ -187,20 +185,14 @@
     const content = document.createElement("div");
     content.className = "content";
 
-    if (msg.badges && msg.badges.length > 0) {
-      const badgeRow = document.createElement("div");
-      badgeRow.className = "badge-row";
-      badgeRow.style.display = "flex";
-      badgeRow.style.gap = "4px";
-
+    // ⭐ INLINE VELORA BADGES BEFORE USERNAME
+    if (msg.platform === "velora" && msg.badges?.length) {
       msg.badges.forEach(src => {
-        if (!src) return;
-        const badge = document.createElement("img");
-        badge.src = src;
-        badgeRow.appendChild(badge);
+        const b = document.createElement("img");
+        b.src = src;
+        b.className = "velora-inline-badge";
+        content.appendChild(b);
       });
-
-      content.appendChild(badgeRow);
     }
 
     const name = document.createElement("div");
