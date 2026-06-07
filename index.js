@@ -19,8 +19,8 @@ let beamPage;
 
 const wss = new WebSocketServer({ noServer: true });
 
-// ⭐ Twitch dedupe cache
-let lastTwitchHTML = null;
+// ⭐ Twitch dedupe cache (server-side)
+let lastTwitchKey = null;
 
 function broadcast(msg) {
   for (const client of wss.clients) {
@@ -126,7 +126,7 @@ async function startBeamChat() {
 }
 
 /* ---------------------------------------------------------
-   TWITCH CHAT SCRAPER — FINAL VERSION WITH DEDUPING
+   TWITCH CHAT SCRAPER — SERVER-SIDE DEDUPE
 --------------------------------------------------------- */
 async function startTwitchChat() {
   console.log("Starting Twitch chat scraper…");
@@ -138,9 +138,26 @@ async function startTwitchChat() {
     { waitUntil: "networkidle2" }
   );
 
+  // ⭐ Deduping happens here, before broadcast
   await twitchPage.exposeFunction("relayTwitch", (msg) => {
-    console.log("TWITCH → FINAL MESSAGE SENT:", msg);
-    broadcast(msg);
+    const key = msg.username + "|" + msg.html + "|twitch";
+
+    if (key === lastTwitchKey) {
+      return; // ignore duplicate Twitch message
+    }
+
+    lastTwitchKey = key;
+
+    const payload = {
+      platform: "twitch",
+      username: msg.username,
+      html: msg.html,
+      avatar: msg.avatar,
+      badges: msg.badges
+    };
+
+    console.log("TWITCH → FINAL MESSAGE SENT:", payload);
+    broadcast(payload);
   });
 
   await twitchPage.evaluate(() => {
@@ -153,8 +170,6 @@ async function startTwitchChat() {
         const lines = [...document.querySelectorAll(".chat-line__message")];
         const last = lines[lines.length - 1];
         if (!last) return;
-
-        console.log("RAW TWITCH NODE:", last.outerHTML);
 
         const username =
           last.querySelector(".chat-author__display-name")?.innerText?.trim() ||
