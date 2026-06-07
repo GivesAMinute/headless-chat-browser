@@ -19,6 +19,9 @@ let beamPage;
 
 const wss = new WebSocketServer({ noServer: true });
 
+// ⭐ Twitch dedupe cache
+let lastTwitchHTML = null;
+
 function broadcast(msg) {
   for (const client of wss.clients) {
     if (client.readyState === 1) {
@@ -123,7 +126,7 @@ async function startBeamChat() {
 }
 
 /* ---------------------------------------------------------
-   TWITCH CHAT SCRAPER — WITH RAW LOGGING
+   TWITCH CHAT SCRAPER — FINAL VERSION WITH DEDUPING
 --------------------------------------------------------- */
 async function startTwitchChat() {
   console.log("Starting Twitch chat scraper…");
@@ -151,7 +154,6 @@ async function startTwitchChat() {
         const last = lines[lines.length - 1];
         if (!last) return;
 
-        // ⭐ LOG THE RAW NODE EXACTLY AS TWITCH CREATED IT
         console.log("RAW TWITCH NODE:", last.outerHTML);
 
         const username =
@@ -185,7 +187,7 @@ async function startTwitchChat() {
               if (el.classList.contains("chat-image")) {
                 const img = el.querySelector("img") || el;
                 const alt = (img.getAttribute("alt") || "").trim();
-                if (!alt) return ""; // skip UI icons
+                if (!alt) return "";
                 return el.outerHTML || "";
               }
 
