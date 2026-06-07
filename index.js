@@ -126,7 +126,7 @@ async function startBeamChat() {
 }
 
 /* ---------------------------------------------------------
-   TWITCH CHAT SCRAPER — SERVER-SIDE DEDUPE
+   TWITCH CHAT SCRAPER — LONGER DEBOUNCE, SERVER DEDUPE
 --------------------------------------------------------- */
 async function startTwitchChat() {
   console.log("Starting Twitch chat scraper…");
@@ -166,6 +166,7 @@ async function startTwitchChat() {
     const observer = new MutationObserver(() => {
       clearTimeout(twitchDebounce);
 
+      // ⭐ Longer debounce so we only see the final, emote-patched DOM
       twitchDebounce = setTimeout(() => {
         const lines = [...document.querySelectorAll(".chat-line__message")];
         const last = lines[lines.length - 1];
@@ -217,7 +218,7 @@ async function startTwitchChat() {
           avatar,
           badges
         });
-      }, 120);
+      }, 600); // ⭐ was 120ms; now 600ms to catch final state
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
