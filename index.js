@@ -38,8 +38,6 @@ async function startBrowser() {
       "--disable-dev-shm-usage",
       "--disable-gpu",
       "--disable-software-rasterizer",
-
-      // ⭐ Required for Beam sticker autoplay
       "--autoplay-policy=no-user-gesture-required"
     ]
   });
@@ -104,17 +102,8 @@ async function startBrowser() {
         stickerHTML = sticker.outerHTML;
       }
 
-      // ⭐ Twitch static → v2 static (double size)
-      html = html.replace(
-        /https:\/\/static-cdn\.jtvnw\.net\/emoticons\/v1\/([^\/]+)\/1\.0/g,
-        "https://static-cdn.jtvnw.net/emoticons/v2/$1/static/light/3.0"
-      );
-
-      // ⭐ Twitch static → v2 animated (double size)
-      html = html.replace(
-        /https:\/\/static-cdn\.jtvnw\.net\/emoticons\/v1\/([^\/]+)\/1\.0/g,
-        "https://static-cdn.jtvnw.net/emoticons/v2/$1/animated/light/3.0"
-      );
+      // ⭐ NO TWITCH REWRITE — restore original URLs
+      // html stays exactly as Beam outputs it
 
       let platform =
         last.querySelector('[property="service"]')?.getAttribute("value") ||
