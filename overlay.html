@@ -63,11 +63,12 @@
     height: 20px;
   }
 
-  /* ⭐ Twitch emotes 2× size */
+  /* ⭐ Proper 2× Twitch emotes — no overflow */
   .bubble img.chat-image {
-    transform: scale(2);
-    transform-origin: top left;
+    width: 64px;   /* Twitch default is 32px → double it */
+    height: 64px;
     display: inline-block;
+    vertical-align: middle;
   }
 
   /* Normal images (Beam stickers, avatars) */
@@ -101,7 +102,6 @@
 <div id="messages"></div>
 
 <script>
-  // ⭐ Prevent duplicate WebSocket connections
   if (window.__CHAT_OVERLAY_CONNECTED__) {
     console.log("Overlay already connected, skipping duplicate WS");
     throw new Error("Duplicate overlay instance");
