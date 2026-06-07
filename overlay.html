@@ -86,6 +86,14 @@
     max-height: 80px;
   }
 
+  /* ⭐ YouTube emotes 2× size, safely inside bubble */
+  .bubble img.youtube-emote {
+    width: 48px !important;
+    height: 48px !important;
+    vertical-align: middle;
+    display: inline-block;
+  }
+
   .bubble video {
     display: block;
     margin-top: 6px;
@@ -257,6 +265,15 @@
     const text = document.createElement("div");
     text.innerHTML = msg.html;
 
+    // ⭐ Detect YouTube emotes and scale them 2×
+    text.querySelectorAll("img").forEach(img => {
+      const src = img.src || "";
+      if (msg.platform === "youtube" && src.includes("emoji")) {
+        img.classList.add("youtube-emote");
+      }
+    });
+
+    // ⭐ Stickers autoplay
     text.querySelectorAll("video").forEach(v => {
       v.muted = true;
       v.autoplay = true;
