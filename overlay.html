@@ -67,7 +67,7 @@
     max-height: 80px;
   }
 
-  /* ⭐ NEW: Sticker video styling */
+  /* ⭐ Sticker video styling */
   .bubble video {
     max-height: 140px;
     border-radius: 12px;
@@ -152,6 +152,18 @@
 
     const text = document.createElement("div");
     text.innerHTML = msg.html;
+
+    /* ⭐ NEW: Force Beam stickers (video) to autoplay */
+    text.querySelectorAll("video").forEach(v => {
+      v.muted = true;        // required for autoplay
+      v.autoplay = true;
+      v.loop = true;
+      v.playsInline = true;
+
+      // Try to start playback
+      v.play().catch(() => {});
+    });
+
     content.appendChild(text);
 
     bubble.appendChild(content);
