@@ -152,28 +152,36 @@
     const text = document.createElement("div");
     text.innerHTML = msg.html;
 
-    /* ⭐ Wrapper‑based sticker scaling (correct fix) */
+    /* ⭐ Metadata‑aware wrapper‑based sticker scaling */
     text.querySelectorAll("video").forEach(v => {
       v.muted = true;
       v.autoplay = true;
       v.loop = true;
       v.playsInline = true;
 
-      // Create wrapper to shrink layout footprint
-      const w = document.createElement("div");
-      w.style.display = "inline-block";
-      w.style.transform = "scale(0.5)";
-      w.style.transformOrigin = "top left";
+      const applyScaling = () => {
+        // Create wrapper to shrink layout footprint
+        const w = document.createElement("div");
+        w.style.display = "inline-block";
+        w.style.transform = "scale(0.5)";
+        w.style.transformOrigin = "top left";
 
-      // Scale sticker visually
-      v.style.transform = "scale(2)";
-      v.style.transformOrigin = "top left";
+        // Scale sticker visually
+        v.style.transform = "scale(2)";
+        v.style.transformOrigin = "top left";
 
-      // Insert wrapper
-      v.parentNode.insertBefore(w, v);
-      w.appendChild(v);
+        // Insert wrapper
+        v.parentNode.insertBefore(w, v);
+        w.appendChild(v);
 
-      v.play().catch(() => {});
+        v.play().catch(() => {});
+      };
+
+      if (v.readyState >= 1) {
+        applyScaling();
+      } else {
+        v.addEventListener("loadedmetadata", applyScaling, { once: true });
+      }
     });
 
     content.appendChild(text);
