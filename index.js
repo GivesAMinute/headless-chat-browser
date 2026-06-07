@@ -27,6 +27,9 @@ function broadcast(msg) {
   }
 }
 
+/* ---------------------------------------------------------
+   BEAM CHAT SCRAPER
+--------------------------------------------------------- */
 async function startBeamChat() {
   console.log("Launching headless browser…");
 
@@ -44,7 +47,7 @@ async function startBeamChat() {
 
   beamPage = await browser.newPage();
 
-  beamPage.on("console", (msg) => console.log("BROWSER LOG:", msg.text()));
+  beamPage.on("console", (msg) => console.log("BEAM LOG:", msg.text()));
 
   console.log("Injecting Beam login session…");
 
@@ -69,7 +72,6 @@ async function startBeamChat() {
   console.log("Injecting Beam message observer…");
 
   await beamPage.exposeFunction("relayMessage", (msg) => {
-    console.log("Beam chat message:", msg);
     broadcast(msg);
   });
 
@@ -120,15 +122,13 @@ async function startBeamChat() {
   console.log("Beam chat observer active.");
 }
 
+/* ---------------------------------------------------------
+   TWITCH CHAT SCRAPER (ANIMATED EMOTES)
+--------------------------------------------------------- */
 async function startTwitchChat() {
-  if (!browser) {
-    console.error("Browser not initialized before starting Twitch chat.");
-    return;
-  }
+  console.log("Starting Twitch chat scraper…");
 
   const twitchPage = await browser.newPage();
-
-  console.log("Loading Twitch chat…");
 
   await twitchPage.goto(
     "https://www.twitch.tv/popout/givesaminute/chat?popout=",
@@ -136,11 +136,10 @@ async function startTwitchChat() {
   );
 
   await twitchPage.exposeFunction("relayTwitch", (msg) => {
-    console.log("Twitch chat message:", msg);
     broadcast({
       platform: "twitch",
       username: msg.username,
-      html: msg.html,
+      html: msg.html,   // includes animated emotes
       avatar: msg.avatar,
       badges: msg.badges
     });
@@ -152,29 +151,32 @@ async function startTwitchChat() {
       const last = lines[lines.length - 1];
       if (!last) return;
 
-      const username =
-        last.querySelector(".chat-author__display-name")?.innerText?.trim() ||
-        "Unknown";
+      // ⭐ Wait for Twitch to finish patching the message (animated emotes)
+      setTimeout(() => {
+        const username =
+          last.querySelector(".chat-author__display-name")?.innerText?.trim() ||
+          "Unknown";
 
-      const avatar =
-        last.querySelector(".chat-badge-avatar img")?.src ||
-        null;
+        const avatar =
+          last.querySelector(".chat-badge-avatar img")?.src ||
+          null;
 
-      const badges = [...last.querySelectorAll(".chat-badge")].map(
-        (b) => b.querySelector("img")?.src
-      );
+        const badges = [...last.querySelectorAll(".chat-badge")].map(
+          (b) => b.querySelector("img")?.src
+        );
 
-      const html =
-        last.querySelector(".message")?.innerHTML ||
-        last.innerHTML ||
-        "";
+        const html =
+          last.querySelector(".message")?.innerHTML ||
+          last.innerHTML ||
+          "";
 
-      window.relayTwitch({
-        username,
-        html,
-        avatar,
-        badges
-      });
+        window.relayTwitch({
+          username,
+          html,
+          avatar,
+          badges
+        });
+      }, 50); // ⭐ ensures animated emotes are included
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
@@ -183,6 +185,9 @@ async function startTwitchChat() {
   console.log("Twitch chat observer active.");
 }
 
+/* ---------------------------------------------------------
+   EXPRESS + SERVER
+--------------------------------------------------------- */
 app.get("/overlay", (_req, res) => {
   res.sendFile(path.join(__dirname, "overlay.html"));
 });
@@ -197,12 +202,8 @@ const server = app.listen(port, () => {
   console.log("Server listening on " + port);
 
   startBeamChat()
-    .then(() => {
-      return startTwitchChat();
-    })
-    .catch((err) => {
-      console.error("Browser / chat startup failed:", err);
-    });
+    .then(() => startTwitchChat())
+    .catch((err) => console.error("Startup error:", err));
 
   startYouTube(broadcast);
 });
