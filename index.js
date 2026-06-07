@@ -123,8 +123,7 @@ async function startBeamChat() {
 }
 
 /* ---------------------------------------------------------
-   TWITCH CHAT SCRAPER — FINAL FIX
-   Only capture nodes that contain REAL message content
+   TWITCH CHAT SCRAPER — WITH RAW LOGGING
 --------------------------------------------------------- */
 async function startTwitchChat() {
   console.log("Starting Twitch chat scraper…");
@@ -137,13 +136,8 @@ async function startTwitchChat() {
   );
 
   await twitchPage.exposeFunction("relayTwitch", (msg) => {
-    broadcast({
-      platform: "twitch",
-      username: msg.username,
-      html: msg.html,
-      avatar: msg.avatar,
-      badges: msg.badges
-    });
+    console.log("TWITCH → FINAL MESSAGE SENT:", msg);
+    broadcast(msg);
   });
 
   await twitchPage.evaluate(() => {
@@ -157,14 +151,8 @@ async function startTwitchChat() {
         const last = lines[lines.length - 1];
         if (!last) return;
 
-        // ⭐ IGNORE nodes that contain no real message content
-        const hasFragments =
-          last.querySelector(".text-fragment") ||
-          last.querySelector(".chat-image");
-
-        if (!hasFragments) {
-          return; // <-- THIS is the fix for duplicates
-        }
+        // ⭐ LOG THE RAW NODE EXACTLY AS TWITCH CREATED IT
+        console.log("RAW TWITCH NODE:", last.outerHTML);
 
         const username =
           last.querySelector(".chat-author__display-name")?.innerText?.trim() ||
