@@ -86,7 +86,7 @@
     max-height: 80px;
   }
 
-  /* ⭐ 2× emotes for YouTube + Velora */
+  /* ⭐ Universal 2× emote scaling for YouTube + Velora */
   .bubble img.scaled-emote {
     width: 48px !important;
     height: 48px !important;
@@ -265,41 +265,16 @@
     const text = document.createElement("div");
     text.innerHTML = msg.html;
 
-    // ⭐ Detect YouTube + Velora emotes and scale them 2×
+    // ⭐ UNIVERSAL SMALL‑IMAGE EMOTE SCALING (YouTube + Velora)
     text.querySelectorAll("img").forEach(img => {
-      const src = img.src || "";
+      const isSmall =
+        (img.naturalWidth && img.naturalWidth <= 40) ||
+        (img.width && img.width <= 40);
 
-      // --- YouTube emotes ---
-      if (msg.platform === "youtube") {
-        const isGoogleCDN =
-          src.includes("ggpht.com") ||
-          src.includes("googleusercontent.com") ||
-          src.includes("youtube.com/s/");
+      if (!isSmall) return;
 
-        const isSmall =
-          (img.naturalWidth && img.naturalWidth <= 40) ||
-          (img.width && img.width <= 40);
-
-        if (isGoogleCDN && isSmall) {
-          img.classList.add("scaled-emote");
-        }
-      }
-
-      // --- Velora emotes ---
-      if (msg.platform === "velora") {
-        const looksLikeEmote =
-          src.includes("/emotes/") ||
-          src.includes("/emoji/") ||
-          src.includes("velora") ||
-          src.includes("cdn");
-
-        const isSmall =
-          (img.naturalWidth && img.naturalWidth <= 40) ||
-          (img.width && img.width <= 40);
-
-        if (looksLikeEmote && isSmall) {
-          img.classList.add("scaled-emote");
-        }
+      if (msg.platform === "youtube" || msg.platform === "velora") {
+        img.classList.add("scaled-emote");
       }
     });
 
