@@ -19,8 +19,11 @@
     bottom: 0;
     width: 100%;
     padding: 20px;
+
+    /* ⭐ FIX: remove column-reverse */
     display: flex;
-    flex-direction: column-reverse;
+    flex-direction: column;
+
     gap: 12px;
     align-items: flex-start;
   }
@@ -104,40 +107,34 @@
     return "hsl(" + hue + ", 70%, 60%)";
   }
 
-  // ⭐ Cache to prevent double-render
+  // ⭐ Prevent double-render
   let lastMessageKey = null;
 
   ws.onmessage = (event) => {
     const msg = JSON.parse(event.data);
 
-    // ⭐ Build a unique key for dedupe
+    // ⭐ Unique dedupe key
     const key = msg.platform + "|" + msg.username + "|" + msg.html;
-
-    if (key === lastMessageKey) {
-      return; // ignore duplicate render
-    }
+    if (key === lastMessageKey) return;
     lastMessageKey = key;
 
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
 
-    // ⭐ Beam uses avatar, all others use platform icon
+    // ⭐ Beam uses avatar
     if (msg.platform === "beam" && msg.avatar) {
       const img = document.createElement("img");
       img.className = "avatar";
       img.src = msg.avatar;
       wrapper.appendChild(img);
     } else {
+      // ⭐ Other platforms use icons
       const icon = document.createElement("img");
       icon.className = "platform-icon";
+      icon.src = `/icons/${msg.platform}.png`;
 
-      // ⭐ Only load icon if it exists
-      const iconPath = `/icons/${msg.platform}.png`;
-      icon.src = iconPath;
-
-      icon.onerror = () => {
-        icon.remove(); // remove broken icon entirely
-      };
+      // ⭐ Remove broken icons
+      icon.onerror = () => icon.remove();
 
       wrapper.appendChild(icon);
     }
@@ -186,7 +183,8 @@
     bubble.appendChild(content);
     wrapper.appendChild(bubble);
 
-    document.getElementById("messages").prepend(wrapper);
+    // ⭐ FIX: append instead of prepend
+    document.getElementById("messages").appendChild(wrapper);
 
     setTimeout(() => {
       bubble.classList.add("fadeOut");
