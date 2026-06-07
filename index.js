@@ -15,7 +15,7 @@ const port = process.env.PORT || 8080;
 app.use("/icons", express.static(path.join(__dirname, "public/icons")));
 
 let browser;
-let page;
+let beamPage;
 
 const wss = new WebSocketServer({ noServer: true });
 
@@ -27,7 +27,7 @@ function broadcast(msg) {
   }
 }
 
-async function startBrowser() {
+async function startBeamChat() {
   console.log("Launching headless browser…");
 
   browser = await puppeteer.launch({
@@ -42,17 +42,17 @@ async function startBrowser() {
     ]
   });
 
-  page = await browser.newPage();
+  beamPage = await browser.newPage();
 
-  page.on("console", (msg) => console.log("BROWSER LOG:", msg.text()));
+  beamPage.on("console", (msg) => console.log("BROWSER LOG:", msg.text()));
 
   console.log("Injecting Beam login session…");
 
-  await page.goto("https://beamstream.gg", { waitUntil: "domcontentloaded" });
+  await beamPage.goto("https://beamstream.gg", { waitUntil: "domcontentloaded" });
 
   const storage = JSON.parse(process.env.BEAM_LOCALSTORAGE);
 
-  await page.evaluate((storage) => {
+  await beamPage.evaluate((storage) => {
     for (const [key, value] of Object.entries(storage)) {
       localStorage.setItem(key, value);
     }
@@ -60,20 +60,20 @@ async function startBrowser() {
 
   console.log("Beam session injected. Loading chat…");
 
-  await page.goto("https://beamstream.gg/givesaminute/chat", {
+  await beamPage.goto("https://beamstream.gg/givesaminute/chat", {
     waitUntil: "networkidle2"
   });
 
   await new Promise((resolve) => setTimeout(resolve, 5000));
 
-  console.log("Injecting message observer…");
+  console.log("Injecting Beam message observer…");
 
-  await page.exposeFunction("relayMessage", (msg) => {
-    console.log("New chat message:", msg);
+  await beamPage.exposeFunction("relayMessage", (msg) => {
+    console.log("Beam chat message:", msg);
     broadcast(msg);
   });
 
-  await page.evaluate(() => {
+  await beamPage.evaluate(() => {
     const selector =
       'div[typeof="ChatMessage"], div[typeof="ChatMessageExternal"]';
 
@@ -95,15 +95,11 @@ async function startBrowser() {
         (b) => b.src
       );
 
-      // ⭐ Capture Beam stickers (video elements)
       let stickerHTML = "";
       const sticker = last.querySelector("video");
       if (sticker) {
         stickerHTML = sticker.outerHTML;
       }
-
-      // ⭐ NO TWITCH REWRITE — restore original URLs
-      // html stays exactly as Beam outputs it
 
       let platform =
         last.querySelector('[property="service"]')?.getAttribute("value") ||
@@ -124,6 +120,69 @@ async function startBrowser() {
   console.log("Beam chat observer active.");
 }
 
+async function startTwitchChat() {
+  if (!browser) {
+    console.error("Browser not initialized before starting Twitch chat.");
+    return;
+  }
+
+  const twitchPage = await browser.newPage();
+
+  console.log("Loading Twitch chat…");
+
+  await twitchPage.goto(
+    "https://www.twitch.tv/popout/givesaminute/chat?popout=",
+    { waitUntil: "networkidle2" }
+  );
+
+  await twitchPage.exposeFunction("relayTwitch", (msg) => {
+    console.log("Twitch chat message:", msg);
+    broadcast({
+      platform: "twitch",
+      username: msg.username,
+      html: msg.html,
+      avatar: msg.avatar,
+      badges: msg.badges
+    });
+  });
+
+  await twitchPage.evaluate(() => {
+    const observer = new MutationObserver(() => {
+      const lines = [...document.querySelectorAll(".chat-line__message")];
+      const last = lines[lines.length - 1];
+      if (!last) return;
+
+      const username =
+        last.querySelector(".chat-author__display-name")?.innerText?.trim() ||
+        "Unknown";
+
+      const avatar =
+        last.querySelector(".chat-badge-avatar img")?.src ||
+        null;
+
+      const badges = [...last.querySelectorAll(".chat-badge")].map(
+        (b) => b.querySelector("img")?.src
+      );
+
+      const html =
+        last.querySelector(".message")?.innerHTML ||
+        last.innerHTML ||
+        "";
+
+      window.relayTwitch({
+        username,
+        html,
+        avatar,
+        badges
+      });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
+
+  console.log("Twitch chat observer active.");
+}
+
 app.get("/overlay", (_req, res) => {
   res.sendFile(path.join(__dirname, "overlay.html"));
 });
@@ -137,9 +196,13 @@ setInterval(() => {
 const server = app.listen(port, () => {
   console.log("Server listening on " + port);
 
-  startBrowser().catch((err) => {
-    console.error("Browser failed to start:", err);
-  });
+  startBeamChat()
+    .then(() => {
+      return startTwitchChat();
+    })
+    .catch((err) => {
+      console.error("Browser / chat startup failed:", err);
+    });
 
   startYouTube(broadcast);
 });
