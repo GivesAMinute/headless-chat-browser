@@ -12,15 +12,11 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 8080;
 
-// Serve icons folder
 app.use("/icons", express.static(path.join(__dirname, "public/icons")));
 
 let browser;
 let page;
 
-// ------------------------------
-// WebSocket server for overlays
-// ------------------------------
 const wss = new WebSocketServer({ noServer: true });
 
 function broadcast(msg) {
@@ -31,9 +27,6 @@ function broadcast(msg) {
   }
 }
 
-// ------------------------------
-// Start headless browser (Beam)
-// ------------------------------
 async function startBrowser() {
   console.log("Launching headless browser…");
 
@@ -64,18 +57,10 @@ async function startBrowser() {
     }
   }, storage);
 
-  await page.evaluate(() => {
-    console.log("LOCALSTORAGE_KEYS:", JSON.stringify(Object.keys(localStorage)));
-  });
-
   console.log("Beam session injected. Loading chat…");
 
   await page.goto("https://beamstream.gg/givesaminute/chat", {
     waitUntil: "networkidle2"
-  });
-
-  await page.evaluate(() => {
-    console.log("AFTER_NAV_KEYS:", JSON.stringify(Object.keys(localStorage)));
   });
 
   await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -87,9 +72,6 @@ async function startBrowser() {
     broadcast(msg);
   });
 
-  // ------------------------------
-  // Beam v2 observer
-  // ------------------------------
   await page.evaluate(() => {
     const selector =
       'div[typeof="ChatMessage"], div[typeof="ChatMessageExternal"]';
@@ -101,10 +83,16 @@ async function startBrowser() {
 
       const username =
         last.querySelector('[property="sender.name"]')?.innerText?.trim() || "";
-      const text =
-        last.querySelector('[property="body"]')?.innerText?.trim() || "";
+
+      const html =
+        last.querySelector('[property="body"]')?.innerHTML || "";
+
       const avatar =
         last.querySelector('[property="avatar"]')?.src || null;
+
+      const badges = [...last.querySelectorAll('[property="badge"]')].map(
+        (b) => b.src
+      );
 
       let platform =
         last.querySelector('[property="service"]')?.getAttribute("value") ||
@@ -113,36 +101,28 @@ async function startBrowser() {
       window.relayMessage({
         platform,
         username,
-        text,
-        avatar
+        html,
+        avatar,
+        badges
       });
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
   });
 
-  console.log("Headless browser loaded Beamstream chat");
+  console.log("Beam chat observer active.");
 }
 
-// ------------------------------
-// Overlay route
-// ------------------------------
 app.get("/overlay", (_req, res) => {
   res.sendFile(path.join(__dirname, "overlay.html"));
 });
 
-// ------------------------------
-// KEEP-ALIVE PING
-// ------------------------------
 setInterval(() => {
   fetch("https://" + process.env.RAILWAY_STATIC_URL)
     .then(() => console.log("Keep-alive ping sent"))
     .catch(() => {});
 }, 1000 * 60 * 4);
 
-// ------------------------------
-// HTTP + WebSocket upgrade
-// ------------------------------
 const server = app.listen(port, () => {
   console.log("Server listening on " + port);
 
