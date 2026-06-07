@@ -19,9 +19,6 @@ let beamPage;
 
 const wss = new WebSocketServer({ noServer: true });
 
-// ⭐ Twitch dedupe cache (server-side)
-let lastTwitchKey = null;
-
 function broadcast(msg) {
   for (const client of wss.clients) {
     if (client.readyState === 1) {
@@ -126,7 +123,7 @@ async function startBeamChat() {
 }
 
 /* ---------------------------------------------------------
-   TWITCH CHAT SCRAPER — LONGER DEBOUNCE, SERVER DEDUPE
+   TWITCH CHAT SCRAPER — PER-USER SERVER BUFFER
 --------------------------------------------------------- */
 async function startTwitchChat() {
   console.log("Starting Twitch chat scraper…");
@@ -138,16 +135,21 @@ async function startTwitchChat() {
     { waitUntil: "networkidle2" }
   );
 
-  // ⭐ Deduping happens here, before broadcast
-  await twitchPage.exposeFunction("relayTwitch", (msg) => {
-    const key = msg.username + "|" + msg.html + "|twitch";
+  // ⭐ Per-user pending messages: username -> { timer, msg }
+  const pendingByUser = new Map();
 
-    if (key === lastTwitchKey) {
-      return; // ignore duplicate Twitch message
+  // Called from page context
+  await twitchPage.exposeFunction("relayTwitch", (msg) => {
+    const username = msg.username || "Unknown";
+    const key = username.toLowerCase();
+
+    // Clear any existing pending send for this user
+    const existing = pendingByUser.get(key);
+    if (existing && existing.timer) {
+      clearTimeout(existing.timer);
     }
 
-    lastTwitchKey = key;
-
+    // Store latest version for this user
     const payload = {
       platform: "twitch",
       username: msg.username,
@@ -156,8 +158,14 @@ async function startTwitchChat() {
       badges: msg.badges
     };
 
-    console.log("TWITCH → FINAL MESSAGE SENT:", payload);
-    broadcast(payload);
+    // ⭐ Wait a bit to allow Twitch to patch emotes, then send only the latest
+    const timer = setTimeout(() => {
+      console.log("TWITCH → FINAL MESSAGE SENT:", payload);
+      broadcast(payload);
+      pendingByUser.delete(key);
+    }, 500); // 500ms buffer per user
+
+    pendingByUser.set(key, { timer, msg: payload });
   });
 
   await twitchPage.evaluate(() => {
@@ -166,7 +174,8 @@ async function startTwitchChat() {
     const observer = new MutationObserver(() => {
       clearTimeout(twitchDebounce);
 
-      // ⭐ Longer debounce so we only see the final, emote-patched DOM
+      // Short debounce just to batch DOM mutations;
+      // real buffering happens on the Node side per user.
       twitchDebounce = setTimeout(() => {
         const lines = [...document.querySelectorAll(".chat-line__message")];
         const last = lines[lines.length - 1];
@@ -218,7 +227,7 @@ async function startTwitchChat() {
           avatar,
           badges
         });
-      }, 600); // ⭐ was 120ms; now 600ms to catch final state
+      }, 120);
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
