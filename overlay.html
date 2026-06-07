@@ -35,7 +35,7 @@
   .platform-icon {
     width: 40px;
     height: 40px;
-    border-radius: 6px; /* change to 0px for perfect squares */
+    border-radius: 6px;
     flex-shrink: 0;
   }
 
@@ -156,13 +156,28 @@
     return `/icons/default.png`;
   }
 
-  function colorForUsername(name) {
+  /* ⭐ PLATFORM‑THEMED USERNAME COLORS */
+  function colorForUsername(name, platform) {
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
       hash = (hash * 31 + name.charCodeAt(i)) | 0;
     }
-    const hue = Math.abs(hash) % 360;
-    return "hsl(" + hue + ", 70%, 60%)";
+    const index = Math.abs(hash);
+
+    const palettes = {
+      twitch: ["#9146FF", "#A970FF", "#B98CFF", "#7C4DFF", "#9B59FF"],
+      youtube: ["#FF4444", "#FF6A6A", "#FF3B30", "#FF5E57", "#FF2D55"],
+      velora: ["#F5C451", "#F7D06A", "#E8B23A", "#FFD97A", "#E6A93E"],
+      kick: ["#00FF66", "#00E65C", "#00CC52", "#00B347", "#00993D"],
+      rumble: ["#00AA44", "#00993D", "#008833", "#00772A", "#006622"],
+      beam: ["#00E0FF", "#33E8FF", "#66F0FF", "#00C8E6", "#00B0CC"]
+    };
+
+    const palette = palettes[platform];
+    if (palette) return palette[index % palette.length];
+
+    const hue = index % 360;
+    return `hsl(${hue}, 70%, 60%)`;
   }
 
   ws.onmessage = (event) => {
@@ -212,7 +227,7 @@
     const name = document.createElement("div");
     name.className = "username";
     name.textContent = cleanName;
-    name.style.color = colorForUsername(cleanName);
+    name.style.color = colorForUsername(cleanName, msg.platform);
     content.appendChild(name);
 
     const text = document.createElement("div");
