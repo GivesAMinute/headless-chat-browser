@@ -31,7 +31,15 @@
     gap: 10px;
   }
 
-  .platform-icon,
+  /* ⭐ PLATFORM ICONS NOW SQUARE */
+  .platform-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px; /* change to 0px for perfect squares */
+    flex-shrink: 0;
+  }
+
+  /* ⭐ BEAM AVATARS REMAIN CIRCULAR */
   .avatar {
     width: 40px;
     height: 40px;
@@ -195,10 +203,16 @@
       });
     }
 
+    // ⭐ CLEAN YOUTUBE USERNAMES (remove @ prefix)
+    let cleanName = msg.username;
+    if (msg.platform === "youtube" && cleanName.startsWith("@")) {
+      cleanName = cleanName.substring(1);
+    }
+
     const name = document.createElement("div");
     name.className = "username";
-    name.textContent = msg.username;
-    name.style.color = colorForUsername(msg.username);
+    name.textContent = cleanName;
+    name.style.color = colorForUsername(cleanName);
     content.appendChild(name);
 
     const text = document.createElement("div");
