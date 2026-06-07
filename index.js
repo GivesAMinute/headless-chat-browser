@@ -28,7 +28,7 @@ function broadcast(msg) {
 }
 
 /* ---------------------------------------------------------
-   BEAM CHAT SCRAPER — NOW FILTERS OUT NON-BEAM MESSAGES
+   BEAM CHAT SCRAPER — ALLOW EVERYTHING EXCEPT TWITCH
 --------------------------------------------------------- */
 async function startBeamChat() {
   console.log("Launching headless browser…");
@@ -88,8 +88,8 @@ async function startBeamChat() {
         last.querySelector('[property="service"]')?.getAttribute("value") ||
         "beam";
 
-      // ⭐ IMPORTANT: Ignore Twitch/YouTube/etc inside Beam multichat
-      if (platform !== "beam") return;
+      // ⭐ BLOCK ONLY TWITCH — allow all other platforms Beam merges
+      if (platform === "twitch") return;
 
       const username =
         last.querySelector('[property="sender.name"]')?.innerText?.trim() || "";
@@ -126,7 +126,7 @@ async function startBeamChat() {
 }
 
 /* ---------------------------------------------------------
-   TWITCH CHAT SCRAPER — PER-USER SERVER BUFFER
+   TWITCH CHAT SCRAPER — PER-USER BUFFER (ANIMATED EMOTES)
 --------------------------------------------------------- */
 async function startTwitchChat() {
   console.log("Starting Twitch chat scraper…");
