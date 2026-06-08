@@ -44,7 +44,7 @@ function startBlaze() {
     return;
   }
 
-  const eventName = `channel_chat_${channelId}`;
+  const expectedEvent = `channel_chat_${channelId}`;
 
   function connectBlaze() {
     console.log("[BLAZE] Connecting via socket.io…");
@@ -61,11 +61,15 @@ function startBlaze() {
       console.log("[BLAZE] Connected to Blaze socket.io");
     });
 
-    socket.on("connect_error", (err) => {
-      console.error("[BLAZE] Connection error:", err.message);
+    // ⭐ LOG EVERYTHING BLAZE SENDS
+    socket.onAny((event, ...args) => {
+      console.log("[BLAZE] EVENT:", event, args);
     });
 
-    socket.on(eventName, (payload) => {
+    // ⭐ Try the expected event anyway
+    socket.on(expectedEvent, (payload) => {
+      console.log("[BLAZE] Expected event fired:", payload);
+
       if (!payload) return;
 
       const sender = payload.sender || {};
@@ -88,6 +92,7 @@ function startBlaze() {
 
   connectBlaze();
 }
+
 
 /* ---------------------------------------------------------
    BEAM CHAT SCRAPER — ALLOW EVERYTHING EXCEPT TWITCH & VELORA
