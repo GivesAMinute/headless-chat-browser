@@ -4,9 +4,9 @@ import { WebSocketServer } from "ws";
 import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
-import { EventSource } from "eventsource";  // ⭐ Blaze uses SSE, not socket.io
 
 import { startYouTube } from "./sources/youtube.js";
+import { startBlaze } from "./sources/blaze.js";   // ⭐ Clean Blaze integration
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,72 +27,6 @@ function broadcast(msg) {
       client.send(JSON.stringify(msg));
     }
   }
-}
-
-/* ---------------------------------------------------------
-   ⭐ BLAZE CHAT — SSE CLIENT (CORRECT IMPLEMENTATION)
---------------------------------------------------------- */
-function startBlaze() {
-  const channelId =
-    process.env.BLAZE_CHANNEL_ID ||
-    "f6b81529-8fcd-4bbe-b2b7-8f6d9c99b15f";
-
-  const blazeCookie = process.env.BLAZE_COOKIE;
-  const blazeToken = "9a14679549b5a4bcf88bf15b90a5716e"; // ⭐ confirmed
-
-  if (!blazeCookie) {
-    console.error("[BLAZE] Missing BLAZE_COOKIE env var");
-    return;
-  }
-
-  function connectSSE() {
-    console.log("[BLAZE] Connecting to Blaze SSE…");
-
-    const url = `https://blaze.stream/bapi/chats/${channelId}/events`;
-
-    const evt = new EventSource(url, {
-      headers: {
-        Cookie: blazeCookie,
-        Authorization: `Bearer ${blazeToken}`
-      }
-    });
-
-    evt.onopen = () => {
-      console.log("[BLAZE] SSE connection opened");
-    };
-
-    evt.onerror = (err) => {
-      console.error("[BLAZE] SSE error:", err);
-      console.log("[BLAZE] Reconnecting in 3s…");
-      evt.close();
-      setTimeout(connectSSE, 3000);
-    };
-
-    evt.onmessage = (event) => {
-      if (!event.data) return;
-
-      let data;
-      try {
-        data = JSON.parse(event.data);
-      } catch {
-        return;
-      }
-
-      if (data.type !== "message") return;
-
-      const sender = data.sender || {};
-
-      broadcast({
-        platform: "blaze",
-        username: sender.displayName || sender.username || "Unknown",
-        html: data.message || "",
-        avatar: sender.avatarUrl || null,
-        badges: sender.roles || []
-      });
-    };
-  }
-
-  connectSSE();
 }
 
 /* ---------------------------------------------------------
@@ -384,7 +318,7 @@ const server = app.listen(port, () => {
     .catch((err) => console.error("Startup error:", err));
 
   startYouTube(broadcast);
-  startBlaze();   // ⭐ Blaze now fully integrated via SSE
+  startBlaze(broadcast);   // ⭐ Clean Blaze integration
 });
 
 server.on("upgrade", (req, socket, head) => {
