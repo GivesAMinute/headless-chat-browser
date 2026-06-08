@@ -4,7 +4,7 @@ import { WebSocketServer } from "ws";
 import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
-import EventSource from "eventsource";   // ⭐ Blaze uses SSE, not socket.io
+import { EventSource } from "eventsource";  // ⭐ Blaze uses SSE, not socket.io
 
 import { startYouTube } from "./sources/youtube.js";
 
