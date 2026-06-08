@@ -32,6 +32,9 @@ function broadcast(msg) {
 /* ---------------------------------------------------------
    ⭐ BLAZE CHAT — SOCKET.IO CLIENT (NO PUPPETEER)
 --------------------------------------------------------- */
+/* ---------------------------------------------------------
+   ⭐ BLAZE CHAT — SOCKET.IO CLIENT (NO PUPPETEER)
+--------------------------------------------------------- */
 function startBlaze() {
   const channelId =
     process.env.BLAZE_CHANNEL_ID ||
@@ -59,6 +62,15 @@ function startBlaze() {
 
     socket.on("connect", () => {
       console.log("[BLAZE] Connected to Blaze socket.io");
+
+      // ⭐ Try all likely join patterns
+      console.log("[BLAZE] Attempting room joins…");
+
+      socket.emit("join", { channelId });
+      socket.emit("join_room", channelId);
+      socket.emit("subscribe", { room: channelId });
+      socket.emit("subscribe", channelId);
+      socket.emit("room:join", channelId);
     });
 
     // ⭐ LOG EVERYTHING BLAZE SENDS
@@ -83,18 +95,16 @@ function startBlaze() {
       });
     });
 
-socket.on("connect", () => {
-  console.log("[BLAZE] Connected to Blaze socket.io");
+    socket.on("disconnect", (reason) => {
+      console.log("[BLAZE] Disconnected:", reason);
+      console.log("[BLAZE] Reconnecting in 3s…");
+      setTimeout(connectBlaze, 3000);
+    });
+  }
 
-  // ⭐ Try all likely join patterns
-  console.log("[BLAZE] Attempting room joins…");
+  connectBlaze();
+}
 
-  socket.emit("join", { channelId });
-  socket.emit("join_room", channelId);
-  socket.emit("subscribe", { room: channelId });
-  socket.emit("subscribe", channelId);
-  socket.emit("room:join", channelId);
-});
 
 /* ---------------------------------------------------------
    BEAM CHAT SCRAPER — ALLOW EVERYTHING EXCEPT TWITCH & VELORA
