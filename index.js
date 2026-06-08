@@ -4,7 +4,7 @@ import { WebSocketServer } from "ws";
 import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
-import { io } from "socket.io-client";   // ⭐ Blaze uses socket.io-client
+import EventSource from "eventsource";   // ⭐ Blaze uses SSE, not socket.io
 
 import { startYouTube } from "./sources/youtube.js";
 
@@ -30,10 +30,7 @@ function broadcast(msg) {
 }
 
 /* ---------------------------------------------------------
-   ⭐ BLAZE CHAT — SOCKET.IO CLIENT (NO PUPPETEER)
---------------------------------------------------------- */
-/* ---------------------------------------------------------
-   ⭐ BLAZE CHAT — SOCKET.IO CLIENT (NO PUPPETEER)
+   ⭐ BLAZE CHAT — SSE CLIENT (CORRECT IMPLEMENTATION)
 --------------------------------------------------------- */
 function startBlaze() {
   const channelId =
@@ -41,70 +38,62 @@ function startBlaze() {
     "f6b81529-8fcd-4bbe-b2b7-8f6d9c99b15f";
 
   const blazeCookie = process.env.BLAZE_COOKIE;
+  const blazeToken = "9a14679549b5a4bcf88bf15b90a5716e"; // ⭐ confirmed
 
   if (!blazeCookie) {
     console.error("[BLAZE] Missing BLAZE_COOKIE env var");
     return;
   }
 
-  const expectedEvent = `channel_chat_${channelId}`;
+  function connectSSE() {
+    console.log("[BLAZE] Connecting to Blaze SSE…");
 
-  function connectBlaze() {
-    console.log("[BLAZE] Connecting via socket.io…");
+    const url = `https://blaze.stream/bapi/chats/${channelId}/events`;
 
-    const socket = io("https://blaze.stream", {
-      path: "/socket.io/",
-      transports: ["websocket"],
-      extraHeaders: {
-        Cookie: blazeCookie
+    const evt = new EventSource(url, {
+      headers: {
+        Cookie: blazeCookie,
+        Authorization: `Bearer ${blazeToken}`
       }
     });
 
-    socket.on("connect", () => {
-      console.log("[BLAZE] Connected to Blaze socket.io");
+    evt.onopen = () => {
+      console.log("[BLAZE] SSE connection opened");
+    };
 
-      // ⭐ Try all likely join patterns
-      console.log("[BLAZE] Attempting room joins…");
+    evt.onerror = (err) => {
+      console.error("[BLAZE] SSE error:", err);
+      console.log("[BLAZE] Reconnecting in 3s…");
+      evt.close();
+      setTimeout(connectSSE, 3000);
+    };
 
-      socket.emit("join", { channelId });
-      socket.emit("join_room", channelId);
-      socket.emit("subscribe", { room: channelId });
-      socket.emit("subscribe", channelId);
-      socket.emit("room:join", channelId);
-    });
+    evt.onmessage = (event) => {
+      if (!event.data) return;
 
-    // ⭐ LOG EVERYTHING BLAZE SENDS
-    socket.onAny((event, ...args) => {
-      console.log("[BLAZE] EVENT:", event, args);
-    });
+      let data;
+      try {
+        data = JSON.parse(event.data);
+      } catch {
+        return;
+      }
 
-    // ⭐ Try the expected event anyway
-    socket.on(expectedEvent, (payload) => {
-      console.log("[BLAZE] Expected event fired:", payload);
+      if (data.type !== "message") return;
 
-      if (!payload) return;
-
-      const sender = payload.sender || {};
+      const sender = data.sender || {};
 
       broadcast({
         platform: "blaze",
         username: sender.displayName || sender.username || "Unknown",
-        html: payload.message || "",
+        html: data.message || "",
         avatar: sender.avatarUrl || null,
         badges: sender.roles || []
       });
-    });
-
-    socket.on("disconnect", (reason) => {
-      console.log("[BLAZE] Disconnected:", reason);
-      console.log("[BLAZE] Reconnecting in 3s…");
-      setTimeout(connectBlaze, 3000);
-    });
+    };
   }
 
-  connectBlaze();
+  connectSSE();
 }
-
 
 /* ---------------------------------------------------------
    BEAM CHAT SCRAPER — ALLOW EVERYTHING EXCEPT TWITCH & VELORA
@@ -395,7 +384,7 @@ const server = app.listen(port, () => {
     .catch((err) => console.error("Startup error:", err));
 
   startYouTube(broadcast);
-  startBlaze();   // ⭐ Blaze now fully integrated
+  startBlaze();   // ⭐ Blaze now fully integrated via SSE
 });
 
 server.on("upgrade", (req, socket, head) => {
