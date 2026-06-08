@@ -291,7 +291,7 @@ async function startVeloraChat() {
 }
 
 /* ---------------------------------------------------------
-   BLAZE CHAT SCRAPER — VIA HEADLESS BROWSER
+   BLAZE CHAT SCRAPER — WITH DOM DUMP LOGGER
 --------------------------------------------------------- */
 async function startBlazeChat() {
   console.log("Starting Blaze chat scraper…");
@@ -306,42 +306,31 @@ async function startBlazeChat() {
     broadcast(msg);
   });
 
+  /* ⭐ DOM DUMP LOGGER — prints Blaze message HTML every 2 seconds */
   await blazePage.evaluate(() => {
-    const observer = new MutationObserver(() => {
-      const messages = [...document.querySelectorAll(".message")];
-      const last = messages[messages.length - 1];
+    setInterval(() => {
+      const candidates = [...document.querySelectorAll("*")].filter(el =>
+        el.innerText?.trim()?.length > 0 &&
+        (el.className || "").toLowerCase().includes("message")
+      );
+
+      const last = candidates[candidates.length - 1];
       if (!last) return;
 
-      const username =
-        last.querySelector(".username")?.innerText?.trim() || "Unknown";
+      console.log("🔥 BLAZE DOM DUMP:", last.outerHTML);
+    }, 2000);
+  });
 
-      const avatar =
-        last.querySelector("img.avatar")?.src || null;
-
-      const body =
-        last.querySelector(".body") ||
-        last.querySelector(".content") ||
-        last;
-
-      let html = body.innerHTML || "";
-
-      const sticker = last.querySelector("video");
-      let stickerHTML = "";
-      if (sticker) stickerHTML = sticker.outerHTML;
-
-      window.relayBlaze({
-        platform: "blaze",
-        username,
-        html: html + stickerHTML,
-        avatar,
-        badges: []
-      });
+  /* ⭐ MutationObserver (placeholder until we see real DOM) */
+  await blazePage.evaluate(() => {
+    const observer = new MutationObserver(() => {
+      // We will fill this in once we see the DOM dump
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
   });
 
-  console.log("Blaze chat observer active.");
+  console.log("Blaze chat observer active (DOM dump mode).");
 }
 
 /* ---------------------------------------------------------
