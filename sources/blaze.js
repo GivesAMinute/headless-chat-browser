@@ -1,48 +1,124 @@
 // sources/blaze.js
 import WebSocket from "ws";
+import fetch from "node-fetch";
 
-export function startBlaze(broadcast, channelName) {
-  let ws;
+const BLAZE_API_BASE = "https://api.blaze.stream";
+const BLAZE_WS_URL = "wss://api.blaze.stream/v1/events/socket";
 
-  function connect() {
-    ws = new WebSocket("wss://api.blaze.stream/socket");
+export function startBlaze(broadcast) {
+  const channelId =
+    process.env.BLAZE_CHANNEL_ID ||
+    "f6b81529-8fcd-4bbe-b2b7-8f6d9c99b15f"; // your channelId as fallback
 
-    ws.on("open", () => {
-      console.log("🔥 Blaze connected. Joining room:", channelName);
+  const clientId = process.env.BLAZE_CLIENT_ID;
+  const clientSecret = process.env.BLAZE_SECRET;
+  let accessToken = process.env.BLAZE_ACCESS_TOKEN;
 
-      ws.send(JSON.stringify({
-        action: "join",
-        room: channelName,
-        token: null // guest mode works
-      }));
-    });
+  if (!clientId || !clientSecret || !accessToken || !channelId) {
+    console.error(
+      "[BLAZE] Missing env vars: BLAZE_CLIENT_ID, BLAZE_SECRET, BLAZE_ACCESS_TOKEN, BLAZE_CHANNEL_ID"
+    );
+    return;
+  }
 
-    ws.on("message", raw => {
-      let data;
-      try { data = JSON.parse(raw); } catch { return; }
+  let ws = null;
+  let sessionId = null;
+  let reconnectTimer = null;
 
-      // Blaze sometimes wraps messages inside { event, data }
-      const msg = data.data || data;
+  async function subscribeToChat() {
+    if (!sessionId) return;
 
-      if (msg.type !== "message") return;
+    try {
+      const res = await fetch(`${BLAZE_API_BASE}/v1/events/subscriptions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          "client-id": clientId,
+          secret: clientSecret
+        },
+        body: JSON.stringify({
+          type: "channel.chat.message",
+          sessionId,
+          condition: { channelId }
+        })
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        console.error("[BLAZE] Failed to subscribe:", data);
+      } else {
+        console.log("[BLAZE] Subscribed to channel.chat.message");
+      }
+    } catch (err) {
+      console.error("[BLAZE] Error subscribing:", err);
+    }
+  }
+
+  function handleEvent(msg) {
+    if (msg?.metadata?.subscriptionType === "channel.chat.message") {
+      const p = msg.payload;
+      if (!p || !p.sender) return;
 
       broadcast({
         platform: "blaze",
-        username: msg.user?.name || "Unknown",
-        html: msg.content || "",
-        avatar: msg.user?.avatar || null,
-        badges: [] // Blaze doesn't expose badges yet
+        username: p.sender.displayName || p.sender.username || "Unknown",
+        html: p.message || "",
+        avatar: p.sender.avatarUrl || null,
+        badges: p.sender.roles || []
       });
+    }
+  }
+
+  function connect() {
+    console.log("[BLAZE] Connecting to EventSub…");
+
+    ws = new WebSocket(BLAZE_WS_URL, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "client-id": clientId,
+        secret: clientSecret
+      }
     });
 
-    ws.on("close", () => {
-      console.log("🔥 Blaze disconnected. Reconnecting in 3s…");
-      setTimeout(connect, 3000);
+    ws.on("open", () => {
+      console.log("[BLAZE] WebSocket connected");
+    });
+
+    ws.on("message", (raw) => {
+      let msg;
+      try {
+        msg = JSON.parse(raw.toString());
+      } catch {
+        return;
+      }
+
+      // Initial session handshake
+      if (msg.sessionId && !sessionId) {
+        sessionId = msg.sessionId;
+        console.log("[BLAZE] Session established:", sessionId);
+        subscribeToChat();
+        return;
+      }
+
+      handleEvent(msg);
+    });
+
+    ws.on("close", (code, reason) => {
+      console.log(
+        `[BLAZE] WebSocket closed (${code}): ${reason?.toString() || ""}`
+      );
+      sessionId = null;
+      if (!reconnectTimer) {
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
+          connect();
+        }, 3000);
+      }
     });
 
     ws.on("error", (err) => {
-      console.log("🔥 Blaze error:", err);
-      ws.close();
+      console.error("[BLAZE] WebSocket error:", err);
     });
   }
 

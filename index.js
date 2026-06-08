@@ -4,7 +4,9 @@ import { WebSocketServer } from "ws";
 import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
+
 import { startYouTube } from "./sources/youtube.js";
+import { startBlaze } from "./sources/blaze.js";   // ⭐ NEW
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,184 +30,13 @@ function broadcast(msg) {
 }
 
 /* ---------------------------------------------------------
-   DEEP STEALTH PATCH — USED ONLY FOR BLAZE
---------------------------------------------------------- */
-async function applyStealth(page) {
-  await page.evaluateOnNewDocument(() => {
-    // webdriver
-    Object.defineProperty(navigator, "webdriver", { get: () => false });
-
-    // plugins
-    Object.defineProperty(navigator, "plugins", {
-      get: () => [1, 2, 3, 4, 5]
-    });
-
-    // languages
-    Object.defineProperty(navigator, "languages", {
-      get: () => ["en-US", "en"]
-    });
-
-    // hardwareConcurrency
-    Object.defineProperty(navigator, "hardwareConcurrency", {
-      get: () => 8
-    });
-
-    // deviceMemory
-    Object.defineProperty(navigator, "deviceMemory", {
-      get: () => 8
-    });
-
-    // platform
-    Object.defineProperty(navigator, "platform", {
-      get: () => "Win32"
-    });
-
-    // userAgentData (basic spoof)
-    try {
-      if ("userAgentData" in navigator) {
-        const orig = navigator.userAgentData;
-        Object.defineProperty(navigator, "userAgentData", {
-          get: () => orig
-        });
-      }
-    } catch (e) {}
-
-    // chrome object
-    window.chrome = {
-      app: { isInstalled: false },
-      runtime: {},
-      loadTimes: () => {},
-      csi: () => {},
-      webstore: {}
-    };
-
-    // permissions
-    const originalQuery = window.navigator.permissions?.query;
-    if (originalQuery) {
-      window.navigator.permissions.query = (parameters) => {
-        if (parameters && parameters.name === "notifications") {
-          return Promise.resolve({ state: "granted" });
-        }
-        return originalQuery(parameters);
-      };
-    }
-
-    // screen + window sizes
-    try {
-      Object.defineProperty(window, "outerWidth", {
-        get: () => window.innerWidth + 88
-      });
-      Object.defineProperty(window, "outerHeight", {
-        get: () => window.innerHeight + 88
-      });
-    } catch (e) {}
-
-    // WebGL vendor/renderer
-    const patchGL = (ctxType) => {
-      const proto = ctxType.prototype;
-      const origGetParameter = proto.getParameter;
-      proto.getParameter = function (param) {
-        if (param === 37445) return "Intel Inc.";
-        if (param === 37446) return "Intel Iris OpenGL Engine";
-        return origGetParameter.call(this, param);
-      };
-    };
-
-    try {
-      if (window.WebGLRenderingContext) patchGL(WebGLRenderingContext);
-      if (window.WebGL2RenderingContext) patchGL(WebGL2RenderingContext);
-    } catch (e) {}
-
-    // Canvas fingerprint
-    const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
-    HTMLCanvasElement.prototype.toDataURL = function (...args) {
-      const ctx = this.getContext("2d");
-      if (ctx) {
-        ctx.fillStyle = "#00000001";
-        ctx.fillRect(0, 0, 1, 1);
-      }
-      return origToDataURL.apply(this, args);
-    };
-
-    // AudioContext
-    try {
-      const _AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (_AudioContext) {
-        const origCreateAnalyser = _AudioContext.prototype.createAnalyser;
-        _AudioContext.prototype.createAnalyser = function () {
-          const analyser = origCreateAnalyser.call(this);
-          return analyser;
-        };
-      }
-    } catch (e) {}
-
-    // mediaDevices
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-        const origEnum = navigator.mediaDevices.enumerateDevices.bind(
-          navigator.mediaDevices
-        );
-        navigator.mediaDevices.enumerateDevices = () =>
-          origEnum().catch(() => [
-            { kind: "audioinput", label: "Default", deviceId: "default" },
-            { kind: "audiooutput", label: "Default", deviceId: "default" },
-            { kind: "videoinput", label: "Integrated Camera", deviceId: "camera" }
-          ]);
-      }
-    } catch (e) {}
-
-    // RTCPeerConnection
-    try {
-      const OrigRTCPeerConnection =
-        window.RTCPeerConnection || window.webkitRTCPeerConnection;
-      if (OrigRTCPeerConnection) {
-        const origCreateDataChannel =
-          OrigRTCPeerConnection.prototype.createDataChannel;
-        OrigRTCPeerConnection.prototype.createDataChannel = function (...args) {
-          return origCreateDataChannel.apply(this, args);
-        };
-      }
-    } catch (e) {}
-
-    // touch support
-    try {
-      Object.defineProperty(navigator, "maxTouchPoints", { get: () => 0 });
-    } catch (e) {}
-
-    // clipboard
-    try {
-      if (!navigator.clipboard) {
-        navigator.clipboard = {
-          writeText: () => Promise.resolve(),
-          readText: () => Promise.resolve("")
-        };
-      }
-    } catch (e) {}
-
-    // timezone
-    try {
-      const IntlDateTimeFormat = Intl.DateTimeFormat;
-      Intl.DateTimeFormat = function (...args) {
-        return new IntlDateTimeFormat(...args);
-      };
-    } catch (e) {}
-
-    // eval length
-    const origEval = window.eval;
-    window.eval = function (src) {
-      return origEval(src);
-    };
-  });
-}
-
-/* ---------------------------------------------------------
-   BEAM CHAT SCRAPER — UNTOUCHED
+   BEAM CHAT SCRAPER — ALLOW EVERYTHING EXCEPT TWITCH & VELORA
 --------------------------------------------------------- */
 async function startBeamChat() {
   console.log("Launching headless browser…");
 
   browser = await puppeteer.launch({
-    headless: "new",
+    headless: true,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
@@ -298,7 +129,7 @@ async function startBeamChat() {
 }
 
 /* ---------------------------------------------------------
-   TWITCH CHAT SCRAPER — UNTOUCHED
+   TWITCH CHAT SCRAPER — PER-USER BUFFER (ANIMATED EMOTES)
 --------------------------------------------------------- */
 async function startTwitchChat() {
   console.log("Starting Twitch chat scraper…");
@@ -405,7 +236,7 @@ async function startTwitchChat() {
 }
 
 /* ---------------------------------------------------------
-   VELORA CHAT SCRAPER — UNTOUCHED
+   VELORA CHAT SCRAPER — DIRECT FROM VELORE POPOUT
 --------------------------------------------------------- */
 async function startVeloraChat() {
   console.log("Starting Velora chat scraper…");
@@ -462,51 +293,9 @@ async function startVeloraChat() {
 }
 
 /* ---------------------------------------------------------
-   BLAZE CHAT SCRAPER — DEEP STEALTH + INSPECTOR
+   ⭐ BLAZE EVENTSUB — OFFICIAL API (NO PUPPETEER)
 --------------------------------------------------------- */
-async function startBlazeChat() {
-  console.log("Starting Blaze chat scraper…");
-
-  const blazePage = await browser.newPage();
-
-  await applyStealth(blazePage);
-
-  await blazePage.setUserAgent(
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-    "(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
-  );
-
-  await blazePage.setViewport({ width: 1280, height: 900 });
-
-  await blazePage.goto("https://blaze.stream/embed/chat/givesaminute", {
-    waitUntil: "networkidle2"
-  });
-
-  await blazePage.exposeFunction("relayBlaze", (msg) => {
-    broadcast(msg);
-  });
-
-  await blazePage.evaluate(() => {
-    setInterval(() => {
-      const frames = [...document.querySelectorAll("iframe")];
-      console.log("🔥 BLAZE IFRAME COUNT:", frames.length);
-      frames.forEach((f, i) => {
-        console.log("🔥 BLAZE IFRAME", i, f.src || "(no src)");
-      });
-
-      const candidates = [...document.querySelectorAll("*")].filter(el =>
-        el.innerText?.trim()?.length > 0 &&
-        (el.className || "").toLowerCase().includes("message")
-      );
-      const last = candidates[candidates.length - 1];
-      if (last) {
-        console.log("🔥 BLAZE DOM CANDIDATE:", last.outerHTML.slice(0, 500));
-      }
-    }, 3000);
-  });
-
-  console.log("Blaze iframe/DOM inspector active.");
-}
+startBlaze(broadcast);
 
 /* ---------------------------------------------------------
    EXPRESS + SERVER
@@ -528,8 +317,7 @@ const server = app.listen(port, () => {
     .then(() => {
       return Promise.all([
         startTwitchChat(),
-        startVeloraChat(),
-        startBlazeChat()
+        startVeloraChat()
       ]);
     })
     .catch((err) => console.error("Startup error:", err));
