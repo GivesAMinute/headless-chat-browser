@@ -31,7 +31,6 @@
     gap: 10px;
   }
 
-  /* ⭐ PLATFORM ICONS NOW SQUARE */
   .platform-icon {
     width: 40px;
     height: 40px;
@@ -39,7 +38,6 @@
     flex-shrink: 0;
   }
 
-  /* ⭐ BEAM AVATARS REMAIN CIRCULAR */
   .avatar {
     width: 40px;
     height: 40px;
@@ -86,7 +84,6 @@
     max-height: 80px;
   }
 
-  /* ⭐ Universal 2× emote scaling for YouTube + Velora + Blaze */
   .bubble img.scaled-emote {
     width: 48px !important;
     height: 48px !important;
@@ -149,7 +146,7 @@
     odysee: "odysee",
     arena: "arena",
 
-    blaze: "blaze",   /* ⭐ Blaze now supported */
+    blaze: "blaze",
 
     bitchute: "bitchute",
     vpzone: "vpzone",
@@ -166,7 +163,6 @@
     return `/icons/default.png`;
   }
 
-  /* ⭐ EXPANDED PLATFORM‑THEMED USERNAME COLORS (Blaze added) */
   function colorForUsername(name, platform) {
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
@@ -205,8 +201,6 @@
         "#00F2FF", "#4DF6FF", "#80FAFF", "#00D4E6", "#00BED1",
         "#00E8F2", "#33F0FF"
       ],
-
-      /* ⭐ NEW: Blaze warm orange palette */
       blaze: [
         "#FF8800", "#FF9C33", "#FFB566", "#FF7A00",
         "#E66F00", "#CC6400", "#FF9933", "#FFB266",
@@ -249,7 +243,6 @@
     const content = document.createElement("div");
     content.className = "content";
 
-    // ⭐ INLINE VELORA BADGES BEFORE USERNAME
     if (msg.platform === "velora" && msg.badges?.length) {
       msg.badges.forEach(src => {
         const b = document.createElement("img");
@@ -259,7 +252,6 @@
       });
     }
 
-    // ⭐ CLEAN YOUTUBE USERNAMES (remove @ prefix)
     let cleanName = msg.username;
     if (msg.platform === "youtube" && cleanName.startsWith("@")) {
       cleanName = cleanName.substring(1);
@@ -274,7 +266,6 @@
     const text = document.createElement("div");
     text.innerHTML = msg.html;
 
-    // ⭐ UNIVERSAL SMALL‑IMAGE EMOTE SCALING (YouTube + Velora + Blaze)
     text.querySelectorAll("img").forEach(img => {
       const isSmall =
         (img.naturalWidth && img.naturalWidth <= 40) ||
@@ -289,7 +280,6 @@
       }
     });
 
-    // ⭐ Stickers autoplay
     text.querySelectorAll("video").forEach(v => {
       v.muted = true;
       v.autoplay = true;

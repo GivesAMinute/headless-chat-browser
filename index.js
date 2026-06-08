@@ -5,7 +5,6 @@ import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
 import { startYouTube } from "./sources/youtube.js";
-import { startBlaze } from "./sources/blaze.js";   // ⭐ NEW
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -292,6 +291,60 @@ async function startVeloraChat() {
 }
 
 /* ---------------------------------------------------------
+   BLAZE CHAT SCRAPER — VIA HEADLESS BROWSER
+--------------------------------------------------------- */
+async function startBlazeChat() {
+  console.log("Starting Blaze chat scraper…");
+
+  const blazePage = await browser.newPage();
+
+  await blazePage.goto("https://blaze.stream/givesaminute/chat", {
+    waitUntil: "networkidle2"
+  });
+
+  await blazePage.exposeFunction("relayBlaze", (msg) => {
+    broadcast(msg);
+  });
+
+  await blazePage.evaluate(() => {
+    const observer = new MutationObserver(() => {
+      const messages = [...document.querySelectorAll(".message")];
+      const last = messages[messages.length - 1];
+      if (!last) return;
+
+      const username =
+        last.querySelector(".username")?.innerText?.trim() || "Unknown";
+
+      const avatar =
+        last.querySelector("img.avatar")?.src || null;
+
+      const body =
+        last.querySelector(".body") ||
+        last.querySelector(".content") ||
+        last;
+
+      let html = body.innerHTML || "";
+
+      const sticker = last.querySelector("video");
+      let stickerHTML = "";
+      if (sticker) stickerHTML = sticker.outerHTML;
+
+      window.relayBlaze({
+        platform: "blaze",
+        username,
+        html: html + stickerHTML,
+        avatar,
+        badges: []
+      });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
+
+  console.log("Blaze chat observer active.");
+}
+
+/* ---------------------------------------------------------
    EXPRESS + SERVER
 --------------------------------------------------------- */
 app.get("/overlay", (_req, res) => {
@@ -311,14 +364,13 @@ const server = app.listen(port, () => {
     .then(() => {
       return Promise.all([
         startTwitchChat(),
-        startVeloraChat()
+        startVeloraChat(),
+        startBlazeChat()   // ⭐ NEW
       ]);
     })
     .catch((err) => console.error("Startup error:", err));
 
   startYouTube(broadcast);
-
-  startBlaze(broadcast, "givesaminute");   // ⭐ NEW
 });
 
 server.on("upgrade", (req, socket, head) => {
