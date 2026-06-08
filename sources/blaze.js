@@ -1,6 +1,9 @@
 // sources/blaze.js
 import axios from "axios";
 
+/* ---------------------------------------------------------
+   ⭐ BlazePoller — polls Blaze chat every X ms
+--------------------------------------------------------- */
 class BlazePoller {
   constructor({ channelId, clientId, accessToken, intervalMs = 1000, onMessages }) {
     this.channelId = channelId;
@@ -14,7 +17,7 @@ class BlazePoller {
   }
 
   async _fetchMessages() {
-    const url = "https://api.blaze.stream/v1/chats/messages";
+    const url = `https://api.blaze.stream/v1/channels/${this.channelId}/chats/messages`;
 
     const res = await axios.get(url, {
       headers: {
@@ -23,11 +26,11 @@ class BlazePoller {
         Accept: "application/json"
       },
       params: {
-        channelId: this.channelId,
         limit: 50
       }
     });
 
+    // Blaze returns: { data: { messages: [...] } }
     return res.data?.data?.messages || [];
   }
 
@@ -41,8 +44,9 @@ class BlazePoller {
       }
     }
 
-    if (this.lastSeenIds.size > 1000) {
-      const ids = Array.from(this.lastSeenIds).slice(-500);
+    // Prevent unbounded growth
+    if (this.lastSeenIds.size > 2000) {
+      const ids = Array.from(this.lastSeenIds).slice(-1000);
       this.lastSeenIds = new Set(ids);
     }
 
@@ -60,7 +64,7 @@ class BlazePoller {
         this.onMessages(newOnes);
       }
     } catch (err) {
-      console.error("[BLAZE] Poll error:", err.message);
+      console.error("[BLAZE] Poll error:", err?.response?.data || err.message);
     }
 
     if (this.running) {
@@ -81,7 +85,58 @@ class BlazePoller {
 }
 
 /* ---------------------------------------------------------
-   ⭐ startBlaze — wrapper used by index.js
+   ⭐ transformBlazeMessage — normalize Blaze → overlay format
+--------------------------------------------------------- */
+function transformBlazeMessage(msg) {
+  const sender = msg.sender || msg.user || {};
+
+  // Blaze messages have structured parts: text, emote, sticker
+  const parts = (msg.parts || msg.fragments || msg.contentParts || []).map((p) => {
+    if (p.type === "text") {
+      return { type: "text", text: p.text };
+    }
+
+    if (p.type === "emote") {
+      return {
+        type: "emote",
+        id: p.id,
+        name: p.name || p.id,
+        url: p.url
+      };
+    }
+
+    if (p.type === "sticker") {
+      return {
+        type: "sticker",
+        id: p.id,
+        name: p.name || p.id,
+        url: p.url
+      };
+    }
+
+    return null;
+  }).filter(Boolean);
+
+  // Fallback plain text
+  const text = parts
+    .filter((p) => p.type === "text")
+    .map((p) => p.text)
+    .join("");
+
+  return {
+    platform: "blaze",
+    id: msg.id,
+    username: sender.displayName || sender.username || sender.name || "Unknown",
+    avatar: sender.avatarUrl || sender.avatar || null,
+    badges: sender.roles || sender.badges || [],
+    text,
+    parts,
+    timestamp: msg.timestamp || Date.now()
+  };
+}
+
+/* ---------------------------------------------------------
+   ⭐ startBlaze — used by index.js
 --------------------------------------------------------- */
 export function startBlaze(broadcast) {
   const channelId =
@@ -102,20 +157,9 @@ export function startBlaze(broadcast) {
     accessToken,
     intervalMs: 1000,
     onMessages: (messages) => {
-      for (const msg of messages) {
-        const sender = msg.sender || msg.user || {};
-
-        broadcast({
-          platform: "blaze",
-          username:
-            sender.displayName ||
-            sender.username ||
-            sender.name ||
-            "Unknown",
-          html: msg.message || msg.content || "",
-          avatar: sender.avatarUrl || sender.avatar || null,
-          badges: sender.roles || sender.badges || []
-        });
+      for (const raw of messages) {
+        const normalized = transformBlazeMessage(raw);
+        broadcast(normalized);
       }
     }
   });

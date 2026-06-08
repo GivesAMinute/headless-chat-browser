@@ -30,7 +30,7 @@ function broadcast(msg) {
 }
 
 /* ---------------------------------------------------------
-   BEAM CHAT SCRAPER — ALLOW EVERYTHING EXCEPT TWITCH & VELORA
+   BEAM CHAT SCRAPER
 --------------------------------------------------------- */
 async function startBeamChat() {
   console.log("Launching headless browser…");
@@ -129,7 +129,7 @@ async function startBeamChat() {
 }
 
 /* ---------------------------------------------------------
-   TWITCH CHAT SCRAPER — PER-USER BUFFER (ANIMATED EMOTES)
+   TWITCH CHAT SCRAPER
 --------------------------------------------------------- */
 async function startTwitchChat() {
   console.log("Starting Twitch chat scraper…");
@@ -236,7 +236,7 @@ async function startTwitchChat() {
 }
 
 /* ---------------------------------------------------------
-   VELORA CHAT SCRAPER — DIRECT FROM VELORE POPOUT
+   VELORA CHAT SCRAPER
 --------------------------------------------------------- */
 async function startVeloraChat() {
   console.log("Starting Velora chat scraper…");
@@ -317,6 +317,7 @@ const server = app.listen(port, () => {
     })
     .catch((err) => console.error("Startup error:", err));
 
+  // ⭐ Non-browser sources start immediately
   startYouTube(broadcast);
   startBlaze(broadcast);   // ⭐ Clean Blaze integration
 });
