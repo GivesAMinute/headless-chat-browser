@@ -4,9 +4,9 @@ import { WebSocketServer } from "ws";
 import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
+import { io } from "socket.io-client";   // ⭐ Blaze uses socket.io-client
 
 import { startYouTube } from "./sources/youtube.js";
-import { startBlaze } from "./sources/blaze.js";   // ⭐ NEW
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,6 +27,66 @@ function broadcast(msg) {
       client.send(JSON.stringify(msg));
     }
   }
+}
+
+/* ---------------------------------------------------------
+   ⭐ BLAZE CHAT — SOCKET.IO CLIENT (NO PUPPETEER)
+--------------------------------------------------------- */
+function startBlaze() {
+  const channelId =
+    process.env.BLAZE_CHANNEL_ID ||
+    "f6b81529-8fcd-4bbe-b2b7-8f6d9c99b15f";
+
+  const blazeCookie = process.env.BLAZE_COOKIE;
+
+  if (!blazeCookie) {
+    console.error("[BLAZE] Missing BLAZE_COOKIE env var");
+    return;
+  }
+
+  const eventName = `channel_chat_${channelId}`;
+
+  function connectBlaze() {
+    console.log("[BLAZE] Connecting via socket.io…");
+
+    const socket = io("https://blaze.stream", {
+      path: "/socket.io/",
+      transports: ["websocket"],
+      extraHeaders: {
+        Cookie: blazeCookie
+      }
+    });
+
+    socket.on("connect", () => {
+      console.log("[BLAZE] Connected to Blaze socket.io");
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("[BLAZE] Connection error:", err.message);
+    });
+
+    socket.on(eventName, (payload) => {
+      if (!payload) return;
+
+      const sender = payload.sender || {};
+
+      broadcast({
+        platform: "blaze",
+        username: sender.displayName || sender.username || "Unknown",
+        html: payload.message || "",
+        avatar: sender.avatarUrl || null,
+        badges: sender.roles || []
+      });
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("[BLAZE] Disconnected:", reason);
+      console.log("[BLAZE] Reconnecting in 3s…");
+      setTimeout(connectBlaze, 3000);
+    });
+  }
+
+  connectBlaze();
 }
 
 /* ---------------------------------------------------------
@@ -293,11 +353,6 @@ async function startVeloraChat() {
 }
 
 /* ---------------------------------------------------------
-   ⭐ BLAZE EVENTSUB — OFFICIAL API (NO PUPPETEER)
---------------------------------------------------------- */
-startBlaze(broadcast);
-
-/* ---------------------------------------------------------
    EXPRESS + SERVER
 --------------------------------------------------------- */
 app.get("/overlay", (_req, res) => {
@@ -323,6 +378,7 @@ const server = app.listen(port, () => {
     .catch((err) => console.error("Startup error:", err));
 
   startYouTube(broadcast);
+  startBlaze();   // ⭐ Blaze now fully integrated
 });
 
 server.on("upgrade", (req, socket, head) => {
