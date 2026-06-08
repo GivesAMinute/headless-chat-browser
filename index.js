@@ -28,26 +28,58 @@ function broadcast(msg) {
 }
 
 /* ---------------------------------------------------------
-   STEALTH PATCH — USED ONLY FOR BLAZE
+   DEEP STEALTH PATCH — USED ONLY FOR BLAZE
 --------------------------------------------------------- */
 async function applyStealth(page) {
   await page.evaluateOnNewDocument(() => {
+    // webdriver
     Object.defineProperty(navigator, "webdriver", { get: () => false });
 
+    // plugins
     Object.defineProperty(navigator, "plugins", {
       get: () => [1, 2, 3, 4, 5]
     });
 
+    // languages
     Object.defineProperty(navigator, "languages", {
       get: () => ["en-US", "en"]
     });
 
+    // hardwareConcurrency
+    Object.defineProperty(navigator, "hardwareConcurrency", {
+      get: () => 8
+    });
+
+    // deviceMemory
+    Object.defineProperty(navigator, "deviceMemory", {
+      get: () => 8
+    });
+
+    // platform
+    Object.defineProperty(navigator, "platform", {
+      get: () => "Win32"
+    });
+
+    // userAgentData (basic spoof)
+    try {
+      if ("userAgentData" in navigator) {
+        const orig = navigator.userAgentData;
+        Object.defineProperty(navigator, "userAgentData", {
+          get: () => orig
+        });
+      }
+    } catch (e) {}
+
+    // chrome object
     window.chrome = {
+      app: { isInstalled: false },
       runtime: {},
       loadTimes: () => {},
       csi: () => {},
+      webstore: {}
     };
 
+    // permissions
     const originalQuery = window.navigator.permissions?.query;
     if (originalQuery) {
       window.navigator.permissions.query = (parameters) => {
@@ -58,13 +90,24 @@ async function applyStealth(page) {
       };
     }
 
+    // screen + window sizes
+    try {
+      Object.defineProperty(window, "outerWidth", {
+        get: () => window.innerWidth + 88
+      });
+      Object.defineProperty(window, "outerHeight", {
+        get: () => window.innerHeight + 88
+      });
+    } catch (e) {}
+
+    // WebGL vendor/renderer
     const patchGL = (ctxType) => {
       const proto = ctxType.prototype;
-      const orig = proto.getParameter;
+      const origGetParameter = proto.getParameter;
       proto.getParameter = function (param) {
         if (param === 37445) return "Intel Inc.";
         if (param === 37446) return "Intel Iris OpenGL Engine";
-        return orig.call(this, param);
+        return origGetParameter.call(this, param);
       };
     };
 
@@ -73,6 +116,7 @@ async function applyStealth(page) {
       if (window.WebGL2RenderingContext) patchGL(WebGL2RenderingContext);
     } catch (e) {}
 
+    // Canvas fingerprint
     const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
     HTMLCanvasElement.prototype.toDataURL = function (...args) {
       const ctx = this.getContext("2d");
@@ -81,6 +125,75 @@ async function applyStealth(page) {
         ctx.fillRect(0, 0, 1, 1);
       }
       return origToDataURL.apply(this, args);
+    };
+
+    // AudioContext
+    try {
+      const _AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (_AudioContext) {
+        const origCreateAnalyser = _AudioContext.prototype.createAnalyser;
+        _AudioContext.prototype.createAnalyser = function () {
+          const analyser = origCreateAnalyser.call(this);
+          return analyser;
+        };
+      }
+    } catch (e) {}
+
+    // mediaDevices
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        const origEnum = navigator.mediaDevices.enumerateDevices.bind(
+          navigator.mediaDevices
+        );
+        navigator.mediaDevices.enumerateDevices = () =>
+          origEnum().catch(() => [
+            { kind: "audioinput", label: "Default", deviceId: "default" },
+            { kind: "audiooutput", label: "Default", deviceId: "default" },
+            { kind: "videoinput", label: "Integrated Camera", deviceId: "camera" }
+          ]);
+      }
+    } catch (e) {}
+
+    // RTCPeerConnection
+    try {
+      const OrigRTCPeerConnection =
+        window.RTCPeerConnection || window.webkitRTCPeerConnection;
+      if (OrigRTCPeerConnection) {
+        const origCreateDataChannel =
+          OrigRTCPeerConnection.prototype.createDataChannel;
+        OrigRTCPeerConnection.prototype.createDataChannel = function (...args) {
+          return origCreateDataChannel.apply(this, args);
+        };
+      }
+    } catch (e) {}
+
+    // touch support
+    try {
+      Object.defineProperty(navigator, "maxTouchPoints", { get: () => 0 });
+    } catch (e) {}
+
+    // clipboard
+    try {
+      if (!navigator.clipboard) {
+        navigator.clipboard = {
+          writeText: () => Promise.resolve(),
+          readText: () => Promise.resolve("")
+        };
+      }
+    } catch (e) {}
+
+    // timezone
+    try {
+      const IntlDateTimeFormat = Intl.DateTimeFormat;
+      Intl.DateTimeFormat = function (...args) {
+        return new IntlDateTimeFormat(...args);
+      };
+    } catch (e) {}
+
+    // eval length
+    const origEval = window.eval;
+    window.eval = function (src) {
+      return origEval(src);
     };
   });
 }
@@ -349,7 +462,7 @@ async function startVeloraChat() {
 }
 
 /* ---------------------------------------------------------
-   BLAZE CHAT SCRAPER — NEW
+   BLAZE CHAT SCRAPER — DEEP STEALTH + INSPECTOR
 --------------------------------------------------------- */
 async function startBlazeChat() {
   console.log("Starting Blaze chat scraper…");
