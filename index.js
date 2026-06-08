@@ -83,16 +83,18 @@ function startBlaze() {
       });
     });
 
-    socket.on("disconnect", (reason) => {
-      console.log("[BLAZE] Disconnected:", reason);
-      console.log("[BLAZE] Reconnecting in 3s…");
-      setTimeout(connectBlaze, 3000);
-    });
-  }
+socket.on("connect", () => {
+  console.log("[BLAZE] Connected to Blaze socket.io");
 
-  connectBlaze();
-}
+  // ⭐ Try all likely join patterns
+  console.log("[BLAZE] Attempting room joins…");
 
+  socket.emit("join", { channelId });
+  socket.emit("join_room", channelId);
+  socket.emit("subscribe", { room: channelId });
+  socket.emit("subscribe", channelId);
+  socket.emit("room:join", channelId);
+});
 
 /* ---------------------------------------------------------
    BEAM CHAT SCRAPER — ALLOW EVERYTHING EXCEPT TWITCH & VELORA
