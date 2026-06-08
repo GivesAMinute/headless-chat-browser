@@ -34,14 +34,16 @@ async function startBeamChat() {
   console.log("Launching headless browser…");
 
   browser = await puppeteer.launch({
-    headless: true,
+    headless: false, // ⭐ REQUIRED FOR BLAZE
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       "--disable-gpu",
-      "--disable-software-rasterizer",
-      "--autoplay-policy=no-user-gesture-required"
+      "--autoplay-policy=no-user-gesture-required",
+      "--window-size=1280,900",
+      "--use-fake-ui-for-media-stream",
+      "--use-fake-device-for-media-stream"
     ]
   });
 
@@ -291,14 +293,26 @@ async function startVeloraChat() {
 }
 
 /* ---------------------------------------------------------
-   BLAZE CHAT SCRAPER — LOAD MAIN STREAM PAGE + SPOOF BROWSER
+   BLAZE CHAT SCRAPER — HEADFUL + SPOOFING + IFRAME INSPECTOR
 --------------------------------------------------------- */
 async function startBlazeChat() {
   console.log("Starting Blaze chat scraper…");
 
   const blazePage = await browser.newPage();
 
-  // ⭐ Spoof a real Chrome browser
+  // ⭐ FULL BROWSER FINGERPRINT SPOOFING
+  await blazePage.evaluateOnNewDocument(() => {
+    Object.defineProperty(navigator, "webdriver", { get: () => false });
+    Object.defineProperty(navigator, "plugins", { get: () => [1, 2, 3, 4, 5] });
+    Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en"] });
+
+    window.chrome = {
+      runtime: {},
+      loadTimes: () => {},
+      csi: () => {},
+    };
+  });
+
   await blazePage.setUserAgent(
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
     "(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
@@ -306,8 +320,8 @@ async function startBlazeChat() {
 
   await blazePage.setViewport({ width: 1280, height: 900 });
 
-  // ⭐ Load the REAL Blaze stream page (not /chat)
-  await blazePage.goto("https://blaze.stream/givesaminute", {
+  // ⭐ Load the REAL Blaze chat embed
+  await blazePage.goto("https://blaze.stream/embed/chat/givesaminute", {
     waitUntil: "networkidle2"
   });
 
@@ -330,7 +344,6 @@ async function startBlazeChat() {
 
   console.log("Blaze iframe inspector active.");
 }
-
 
 /* ---------------------------------------------------------
    EXPRESS + SERVER
