@@ -291,14 +291,23 @@ async function startVeloraChat() {
 }
 
 /* ---------------------------------------------------------
-   BLAZE CHAT SCRAPER — FIND CHAT IFRAME FIRST
+   BLAZE CHAT SCRAPER — LOAD MAIN STREAM PAGE + SPOOF BROWSER
 --------------------------------------------------------- */
 async function startBlazeChat() {
   console.log("Starting Blaze chat scraper…");
 
   const blazePage = await browser.newPage();
 
-  await blazePage.goto("https://blaze.stream/givesaminute/chat", {
+  // ⭐ Spoof a real Chrome browser
+  await blazePage.setUserAgent(
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+    "(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+  );
+
+  await blazePage.setViewport({ width: 1280, height: 900 });
+
+  // ⭐ Load the REAL Blaze stream page (not /chat)
+  await blazePage.goto("https://blaze.stream/givesaminute", {
     waitUntil: "networkidle2"
   });
 
