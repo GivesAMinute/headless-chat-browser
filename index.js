@@ -291,7 +291,7 @@ async function startVeloraChat() {
 }
 
 /* ---------------------------------------------------------
-   BLAZE CHAT SCRAPER — WITH DOM DUMP LOGGER
+   BLAZE CHAT SCRAPER — FIND CHAT IFRAME FIRST
 --------------------------------------------------------- */
 async function startBlazeChat() {
   console.log("Starting Blaze chat scraper…");
@@ -306,32 +306,22 @@ async function startBlazeChat() {
     broadcast(msg);
   });
 
-  /* ⭐ DOM DUMP LOGGER — prints Blaze message HTML every 2 seconds */
+  /* ⭐ STEP 1 — Log all iframes so we can find the chat frame */
   await blazePage.evaluate(() => {
     setInterval(() => {
-      const candidates = [...document.querySelectorAll("*")].filter(el =>
-        el.innerText?.trim()?.length > 0 &&
-        (el.className || "").toLowerCase().includes("message")
-      );
+      const frames = [...document.querySelectorAll("iframe")];
 
-      const last = candidates[candidates.length - 1];
-      if (!last) return;
+      console.log("🔥 BLAZE IFRAME COUNT:", frames.length);
 
-      console.log("🔥 BLAZE DOM DUMP:", last.outerHTML);
+      frames.forEach((f, i) => {
+        console.log("🔥 BLAZE IFRAME", i, f.src || "(no src)");
+      });
     }, 2000);
   });
 
-  /* ⭐ MutationObserver (placeholder until we see real DOM) */
-  await blazePage.evaluate(() => {
-    const observer = new MutationObserver(() => {
-      // We will fill this in once we see the DOM dump
-    });
-
-    observer.observe(document.body, { childList: true, subtree: true });
-  });
-
-  console.log("Blaze chat observer active (DOM dump mode).");
+  console.log("Blaze iframe inspector active.");
 }
+
 
 /* ---------------------------------------------------------
    EXPRESS + SERVER
