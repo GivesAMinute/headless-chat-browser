@@ -86,7 +86,7 @@
     max-height: 80px;
   }
 
-  /* ⭐ Universal 2× emote scaling for YouTube + Velora */
+  /* ⭐ Universal 2× emote scaling for YouTube + Velora + Blaze */
   .bubble img.scaled-emote {
     width: 48px !important;
     height: 48px !important;
@@ -148,7 +148,9 @@
     rumble: "rumble",
     odysee: "odysee",
     arena: "arena",
-    blaze: "blaze",
+
+    blaze: "blaze",   /* ⭐ Blaze now supported */
+
     bitchute: "bitchute",
     vpzone: "vpzone",
 
@@ -164,7 +166,7 @@
     return `/icons/default.png`;
   }
 
-  /* ⭐ EXPANDED PLATFORM‑THEMED USERNAME COLORS */
+  /* ⭐ EXPANDED PLATFORM‑THEMED USERNAME COLORS (Blaze added) */
   function colorForUsername(name, platform) {
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
@@ -202,6 +204,13 @@
         "#00E0FF", "#33E8FF", "#66F0FF", "#00C8E6", "#00B0CC",
         "#00F2FF", "#4DF6FF", "#80FAFF", "#00D4E6", "#00BED1",
         "#00E8F2", "#33F0FF"
+      ],
+
+      /* ⭐ NEW: Blaze warm orange palette */
+      blaze: [
+        "#FF8800", "#FF9C33", "#FFB566", "#FF7A00",
+        "#E66F00", "#CC6400", "#FF9933", "#FFB266",
+        "#FF8C1A", "#FF751A", "#E67300", "#CC6600"
       ]
     };
 
@@ -265,7 +274,7 @@
     const text = document.createElement("div");
     text.innerHTML = msg.html;
 
-    // ⭐ UNIVERSAL SMALL‑IMAGE EMOTE SCALING (YouTube + Velora)
+    // ⭐ UNIVERSAL SMALL‑IMAGE EMOTE SCALING (YouTube + Velora + Blaze)
     text.querySelectorAll("img").forEach(img => {
       const isSmall =
         (img.naturalWidth && img.naturalWidth <= 40) ||
@@ -273,7 +282,9 @@
 
       if (!isSmall) return;
 
-      if (msg.platform === "youtube" || msg.platform === "velora") {
+      if (msg.platform === "youtube" ||
+          msg.platform === "velora" ||
+          msg.platform === "blaze") {
         img.classList.add("scaled-emote");
       }
     });

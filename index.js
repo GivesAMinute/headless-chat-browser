@@ -5,6 +5,7 @@ import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
 import { startYouTube } from "./sources/youtube.js";
+import { startBlaze } from "./sources/blaze.js";   // ⭐ NEW
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -88,7 +89,6 @@ async function startBeamChat() {
         last.querySelector('[property="service"]')?.getAttribute("value") ||
         "beam";
 
-      // Block Twitch (handled by Twitch scraper) and Velora (handled by Velora scraper)
       if (platform === "twitch" || platform === "velora") return;
 
       const username =
@@ -317,6 +317,8 @@ const server = app.listen(port, () => {
     .catch((err) => console.error("Startup error:", err));
 
   startYouTube(broadcast);
+
+  startBlaze(broadcast, "givesaminute");   // ⭐ NEW
 });
 
 server.on("upgrade", (req, socket, head) => {
