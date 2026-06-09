@@ -30,30 +30,41 @@ function extractMessage(msg) {
 --------------------------------------------------------- */
 function transformBlazeMessage(msg) {
   const sender = msg.sender || msg.user || {};
+  
+  // ⭐ DEBUG: Print your sender object once
+if (sender.username === "GivesAMinute") {
+  console.log("[BLAZE] Sender object:", sender);
+}
 
   const badges = [];
-const roles = sender.roles || [];
+  const roles = sender.roles || [];
 
-// Normalize all broadcaster role names Blaze might use
-const broadcasterRoles = ["owner", "broadcaster", "streamer", "creator", "host"];
-
-for (const role of roles) {
-  if (broadcasterRoles.includes(role)) {
+  // ⭐ FORCE broadcaster badge if this is the channel owner
+  const CHANNEL_OWNER_ID = process.env.BLAZE_OWNER_ID;
+  if (sender.id === CHANNEL_OWNER_ID) {
     badges.push("https://cdn.blaze.stream/badges/owner.png");
   }
-  if (role === "moderator") {
-    badges.push("https://cdn.blaze.stream/badges/mod.png");
+
+  // ⭐ Normal role-based badges for everyone else
+  const broadcasterRoles = ["owner", "broadcaster", "streamer", "creator", "host"];
+
+  for (const role of roles) {
+    if (broadcasterRoles.includes(role)) {
+      badges.push("https://cdn.blaze.stream/badges/owner.png");
+    }
+    if (role === "moderator") {
+      badges.push("https://cdn.blaze.stream/badges/mod.png");
+    }
+    if (role === "subscriber") {
+      badges.push("https://cdn.blaze.stream/badges/sub.png");
+    }
+    if (role === "vip") {
+      badges.push("https://cdn.blaze.stream/badges/vip.png");
+    }
+    if (role === "og") {
+      badges.push("https://cdn.blaze.stream/badges/og.png");
+    }
   }
-  if (role === "subscriber") {
-    badges.push("https://cdn.blaze.stream/badges/sub.png");
-  }
-  if (role === "vip") {
-    badges.push("https://cdn.blaze.stream/badges/vip.png");
-  }
-  if (role === "og") {
-    badges.push("https://cdn.blaze.stream/badges/og.png");
-  }
-}
 
   return {
     platform: "blaze",
