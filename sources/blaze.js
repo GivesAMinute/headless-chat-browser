@@ -1,4 +1,6 @@
+// sources/blaze.js
 import axios from "axios";
+import { io } from "socket.io-client";
 
 /* ---------------------------------------------------------
    ⭐ Extract message text from any Blaze message shape
@@ -24,7 +26,46 @@ function extractMessage(msg) {
 }
 
 /* ---------------------------------------------------------
-   ⭐ BlazePoller — polls Blaze chat every X ms
+   ⭐ Normalize Blaze → overlay format (with badges)
+--------------------------------------------------------- */
+function transformBlazeMessage(msg) {
+  const sender = msg.sender || msg.user || {};
+
+  // Blaze roles become badges
+  const badges = [];
+  const roles = sender.roles || [];
+
+  for (const role of roles) {
+    if (role === "owner") {
+      badges.push("https://cdn.blaze.stream/badges/owner.png");
+    }
+    if (role === "moderator") {
+      badges.push("https://cdn.blaze.stream/badges/mod.png");
+    }
+    if (role === "subscriber") {
+      badges.push("https://cdn.blaze.stream/badges/sub.png");
+    }
+    if (role === "vip") {
+      badges.push("https://cdn.blaze.stream/badges/vip.png");
+    }
+    if (role === "og") {
+      badges.push("https://cdn.blaze.stream/badges/og.png");
+    }
+  }
+
+  return {
+    platform: "blaze",
+    id: msg.id,
+    username: sender.displayName || sender.username || "Unknown",
+    avatar: sender.avatarUrl || null,
+    badges,
+    html: extractMessage(msg),
+    timestamp: msg.timestamp || msg.createdAt || Date.now()
+  };
+}
+
+/* ---------------------------------------------------------
+   ⭐ Blaze REST Poller — actual chat messages
 --------------------------------------------------------- */
 class BlazePoller {
   constructor({ channelId, clientId, accessToken, intervalMs = 1000, onMessages }) {
@@ -106,24 +147,83 @@ class BlazePoller {
 }
 
 /* ---------------------------------------------------------
-   ⭐ Normalize Blaze → overlay format
+   ⭐ Blaze EventSub — chat events (delete, clear, bans, subs, raids)
 --------------------------------------------------------- */
-function transformBlazeMessage(msg) {
-  const sender = msg.sender || msg.user || {};
+function startBlazeEventSub(broadcast) {
+  const channelId = process.env.BLAZE_CHANNEL_ID;
+  const clientId = process.env.BLAZE_CLIENT_ID;
+  const accessToken = process.env.BLAZE_ACCESS_TOKEN;
 
-  return {
-    platform: "blaze",
-    id: msg.id,
-    username: sender.displayName || sender.username || "Unknown",
-    avatar: sender.avatarUrl || null,
-    badges: sender.roles || [],
-    html: extractMessage(msg),
-    timestamp: msg.timestamp || msg.createdAt || Date.now()
-  };
+  const socket = io("https://blaze.stream", {
+    path: "/ws",
+    transports: ["websocket"],
+    auth: {
+      token: accessToken,
+      "client-id": clientId
+    }
+  });
+
+  socket.on("session_welcome", async ({ sessionId }) => {
+    console.log("[BLAZE] EventSub session:", sessionId);
+
+    const subs = [
+      "channel.chat.message_delete",
+      "channel.chat.clear",
+      "channel.ban",
+      "channel.unban",
+      "channel.follow",
+      "channel.subscribe",
+      "channel.subscription.gift",
+      "channel.raid"
+    ];
+
+    for (const type of subs) {
+      try {
+        await axios.post(
+          "https://api.blaze.stream/v1/events/subscriptions",
+          {
+            type,
+            sessionId,
+            condition: { channelId }
+          },
+          {
+            headers: {
+              "client-id": clientId,
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json"
+            }
+          }
+        );
+
+        console.log("[BLAZE] Subscribed to", type);
+      } catch (err) {
+        console.error("[BLAZE] Subscription error:", type, err.response?.data || err.message);
+      }
+    }
+  });
+
+  socket.on("eventsub", ({ metadata, payload }) => {
+    const type = metadata.subscriptionType;
+
+    broadcast({
+      platform: "blaze",
+      type,
+      html: `<span class="system">${type.replace("channel.", "")}</span>`,
+      payload
+    });
+  });
+
+  socket.on("connect_error", (err) => {
+    console.error("[BLAZE] EventSub connection failed:", err.message);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("[BLAZE] EventSub disconnected");
+  });
 }
 
 /* ---------------------------------------------------------
-   ⭐ startBlaze — used by index.js
+   ⭐ startBlaze — REST + EventSub
 --------------------------------------------------------- */
 export function startBlaze(broadcast) {
   const channelId = process.env.BLAZE_CHANNEL_ID;
@@ -135,6 +235,7 @@ export function startBlaze(broadcast) {
     return;
   }
 
+  // ⭐ REST chat messages
   const poller = new BlazePoller({
     channelId,
     clientId,
@@ -149,5 +250,9 @@ export function startBlaze(broadcast) {
   });
 
   poller.start();
-  console.log("[BLAZE] Poller started");
+
+  // ⭐ EventSub events
+  startBlazeEventSub(broadcast);
+
+  console.log("[BLAZE] Poller + EventSub started");
 }
