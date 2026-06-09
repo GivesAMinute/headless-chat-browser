@@ -1,57 +1,129 @@
-// sources/blaze.js
-import { io } from "socket.io-client";
 import axios from "axios";
 
 /* ---------------------------------------------------------
-   ⭐ Create EventSub subscription
+   ⭐ Extract message text from any Blaze message shape
 --------------------------------------------------------- */
-async function createSubscription({ sessionId, clientId, accessToken, channelId }) {
-  try {
-    const res = await axios.post(
-      "https://api.blaze.stream/v1/events/subscriptions",
-      {
-        type: "channel.chat.message",
-        sessionId,
-        condition: { channelId }
-      },
-      {
-        headers: {
-          "client-id": clientId,
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json"
-        }
-      }
-    );
+function extractMessage(msg) {
+  if (msg.message) return msg.message;
+  if (msg.content) return msg.content;
+  if (msg.text) return msg.text;
 
-    if (!res.data?.success) {
-      console.error("[BLAZE] Subscription failed:", res.data);
-    } else {
-      console.log("[BLAZE] Subscribed to channel.chat.message");
+  const parts = msg.parts || msg.fragments || msg.contentParts || [];
+  if (parts.length > 0) {
+    return parts
+      .map((p) => {
+        if (p.type === "text") return p.text;
+        if (p.type === "emote") return `<img src="${p.url}" class="emote" />`;
+        if (p.type === "sticker") return `<img src="${p.url}" class="sticker" />`;
+        return "";
+      })
+      .join("");
+  }
+
+  return "";
+}
+
+/* ---------------------------------------------------------
+   ⭐ BlazePoller — polls Blaze chat every X ms
+--------------------------------------------------------- */
+class BlazePoller {
+  constructor({ channelId, clientId, accessToken, intervalMs = 1000, onMessages }) {
+    this.channelId = channelId;
+    this.clientId = clientId;
+    this.accessToken = accessToken;
+    this.intervalMs = intervalMs;
+    this.onMessages = onMessages;
+    this.timer = null;
+    this.running = false;
+    this.lastSeenIds = new Set();
+  }
+
+  async _fetchMessages() {
+    const url = "https://api.blaze.stream/v1/chats/messages";
+
+    const res = await axios.get(url, {
+      headers: {
+        "client-id": this.clientId,
+        Authorization: `Bearer ${this.accessToken}`,
+        Accept: "application/json"
+      },
+      params: {
+        channelId: this.channelId,
+        limit: 50
+      }
+    });
+
+    return res.data?.data?.messages || [];
+  }
+
+  _filterNew(messages) {
+    const fresh = [];
+
+    for (const msg of messages) {
+      if (!this.lastSeenIds.has(msg.id)) {
+        fresh.push(msg);
+        this.lastSeenIds.add(msg.id);
+      }
     }
-  } catch (err) {
-    console.error("[BLAZE] Subscription error:", err.response?.data || err.message);
+
+    if (this.lastSeenIds.size > 2000) {
+      const ids = Array.from(this.lastSeenIds).slice(-1000);
+      this.lastSeenIds = new Set(ids);
+    }
+
+    return fresh;
+  }
+
+  async _tick() {
+    if (!this.running) return;
+
+    try {
+      const messages = await this._fetchMessages();
+      const newOnes = this._filterNew(messages);
+
+      if (newOnes.length && this.onMessages) {
+        this.onMessages(newOnes);
+      }
+    } catch (err) {
+      console.error("[BLAZE] Poll error:", err?.response?.data || err.message);
+    }
+
+    if (this.running) {
+      this.timer = setTimeout(() => this._tick(), this.intervalMs);
+    }
+  }
+
+  start() {
+    if (this.running) return;
+    this.running = true;
+    this._tick();
+  }
+
+  stop() {
+    this.running = false;
+    if (this.timer) clearTimeout(this.timer);
   }
 }
 
 /* ---------------------------------------------------------
-   ⭐ Convert Blaze EventSub payload → overlay message
+   ⭐ Normalize Blaze → overlay format
 --------------------------------------------------------- */
-function transformBlazeEvent(payload) {
-  const sender = payload.sender || {};
+function transformBlazeMessage(msg) {
+  const sender = msg.sender || msg.user || {};
 
   return {
     platform: "blaze",
-    id: payload.messageId,
+    id: msg.id,
     username: sender.displayName || sender.username || "Unknown",
     avatar: sender.avatarUrl || null,
     badges: sender.roles || [],
-    html: payload.message || "",
-    timestamp: payload.createdAt || Date.now()
+    html: extractMessage(msg),
+    timestamp: msg.timestamp || msg.createdAt || Date.now()
   };
 }
 
 /* ---------------------------------------------------------
-   ⭐ Start Blaze EventSub Socket.IO client
+   ⭐ startBlaze — used by index.js
 --------------------------------------------------------- */
 export function startBlaze(broadcast) {
   const channelId = process.env.BLAZE_CHANNEL_ID;
@@ -63,51 +135,19 @@ export function startBlaze(broadcast) {
     return;
   }
 
-  console.log("[BLAZE] Connecting to EventSub…");
-
-  // ⭐ Correct Socket.IO namespace + path
-  const socket = io("https://blaze.stream", {
-    path: "/ws",
-    transports: ["websocket"],
-    auth: {
-      token: accessToken,
-      "client-id": clientId
+  const poller = new BlazePoller({
+    channelId,
+    clientId,
+    accessToken,
+    intervalMs: 1000,
+    onMessages: (messages) => {
+      for (const raw of messages) {
+        const normalized = transformBlazeMessage(raw);
+        broadcast(normalized);
+      }
     }
   });
 
-  /* ---------------------------------------------------------
-     ⭐ When connected, Blaze sends session_welcome
-  --------------------------------------------------------- */
-  socket.on("session_welcome", async ({ sessionId }) => {
-    console.log("[BLAZE] Session ready:", sessionId);
-
-    await createSubscription({
-      sessionId,
-      clientId,
-      accessToken,
-      channelId
-    });
-  });
-
-  /* ---------------------------------------------------------
-     ⭐ Handle EventSub notifications
-  --------------------------------------------------------- */
-  socket.on("eventsub", (message) => {
-    const { metadata, payload } = message;
-
-    if (metadata.subscriptionType !== "channel.chat.message") return;
-
-    const normalized = transformBlazeEvent(payload);
-    broadcast(normalized);
-  });
-
-  socket.on("connect_error", (err) => {
-    console.error("[BLAZE] Socket.IO connection failed:", err.message);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("[BLAZE] Disconnected from Blaze");
-  });
-
-  console.log("[BLAZE] EventSub client started");
+  poller.start();
+  console.log("[BLAZE] Poller started");
 }
