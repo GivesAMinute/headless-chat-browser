@@ -26,15 +26,15 @@ function extractMessage(msg) {
 }
 
 /* ---------------------------------------------------------
-   ⭐ Normalize Blaze → overlay format (with badges)
+   ⭐ Normalize Blaze → overlay format (with badges + debug)
 --------------------------------------------------------- */
 function transformBlazeMessage(msg) {
   const sender = msg.sender || msg.user || {};
-  
-  // ⭐ DEBUG: Print your sender object once
-if (sender.username === "GivesAMinute") {
-  console.log("[BLAZE] Sender object:", sender);
-}
+
+  // ⭐ DEBUG HOOK #1 — print your sender object if it's you
+  if (sender.username === "GivesAMinute") {
+    console.log("[BLAZE DEBUG] Sender object:", sender);
+  }
 
   const badges = [];
   const roles = sender.roles || [];
@@ -133,6 +133,10 @@ class BlazePoller {
 
     try {
       const messages = await this._fetchMessages();
+
+      // ⭐ DEBUG HOOK #2 — print ALL raw REST messages
+      console.log("[BLAZE DEBUG] Raw REST messages:", messages);
+
       const newOnes = this._filterNew(messages);
 
       if (newOnes.length && this.onMessages) {
@@ -219,6 +223,11 @@ function startBlazeEventSub(broadcast) {
     // ⭐ Ignore non-eventsub packets (fixes crash)
     if (!metadata || !metadata.subscriptionType) {
       return;
+    }
+
+    // ⭐ DEBUG HOOK #3 — print your EventSub user object
+    if (payload?.user?.username === "GivesAMinute") {
+      console.log("[BLAZE DEBUG] EventSub sender object:", payload.user);
     }
 
     const type = metadata.subscriptionType;
