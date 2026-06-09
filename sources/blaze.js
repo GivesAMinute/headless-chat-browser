@@ -31,7 +31,6 @@ function extractMessage(msg) {
 function transformBlazeMessage(msg) {
   const sender = msg.sender || msg.user || {};
 
-  // Blaze roles become badges
   const badges = [];
   const roles = sender.roles || [];
 
@@ -203,6 +202,11 @@ function startBlazeEventSub(broadcast) {
   });
 
   socket.on("eventsub", ({ metadata, payload }) => {
+    // ⭐ Ignore non-eventsub packets (fixes crash)
+    if (!metadata || !metadata.subscriptionType) {
+      return;
+    }
+
     const type = metadata.subscriptionType;
 
     broadcast({
