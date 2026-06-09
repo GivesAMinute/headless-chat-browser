@@ -17,22 +17,23 @@ class BlazePoller {
   }
 
   async _fetchMessages() {
-    const url = `https://api.blaze.stream/v1/channels/${this.channelId}/chats/messages`;
+  const url = "https://api.blaze.stream/v1/chats/messages";
 
-    const res = await axios.get(url, {
-      headers: {
-        "client-id": this.clientId,
-        Authorization: `Bearer ${this.accessToken}`,
-        Accept: "application/json"
-      },
-      params: {
-        limit: 50
-      }
-    });
+  const res = await axios.get(url, {
+    headers: {
+      "client-id": this.clientId,
+      Authorization: `Bearer ${this.accessToken}`,
+      Accept: "application/json"
+    },
+    params: {
+      channelId: this.channelId,
+      limit: 50
+    }
+  });
 
-    // Blaze returns: { data: { messages: [...] } }
-    return res.data?.data?.messages || [];
-  }
+  return res.data?.data?.messages || [];
+}
+
 
   _filterNew(messages) {
     const fresh = [];
