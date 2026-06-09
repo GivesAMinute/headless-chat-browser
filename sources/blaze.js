@@ -54,10 +54,7 @@ function transformBlazeEvent(payload) {
    ⭐ Start Blaze EventSub Socket.IO client
 --------------------------------------------------------- */
 export function startBlaze(broadcast) {
-  const channelId =
-    process.env.BLAZE_CHANNEL_ID ||
-    "f6b81529-8fcd-4bbe-b2b7-8f6d9c99b15f";
-
+  const channelId = process.env.BLAZE_CHANNEL_ID;
   const clientId = process.env.BLAZE_CLIENT_ID;
   const accessToken = process.env.BLAZE_ACCESS_TOKEN;
 
@@ -68,7 +65,9 @@ export function startBlaze(broadcast) {
 
   console.log("[BLAZE] Connecting to EventSub…");
 
-  const socket = io("https://blaze.stream/ws", {
+  // ⭐ Correct Socket.IO namespace + path
+  const socket = io("https://blaze.stream", {
+    path: "/ws",
     transports: ["websocket"],
     auth: {
       token: accessToken,
@@ -96,9 +95,7 @@ export function startBlaze(broadcast) {
   socket.on("eventsub", (message) => {
     const { metadata, payload } = message;
 
-    if (metadata.subscriptionType !== "channel.chat.message") {
-      return;
-    }
+    if (metadata.subscriptionType !== "channel.chat.message") return;
 
     const normalized = transformBlazeEvent(payload);
     broadcast(normalized);
