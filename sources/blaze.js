@@ -32,25 +32,28 @@ function transformBlazeMessage(msg) {
   const sender = msg.sender || msg.user || {};
 
   const badges = [];
-  const roles = sender.roles || [];
+const roles = sender.roles || [];
 
-  for (const role of roles) {
-    if (role === "owner") {
-      badges.push("https://cdn.blaze.stream/badges/owner.png");
-    }
-    if (role === "moderator") {
-      badges.push("https://cdn.blaze.stream/badges/mod.png");
-    }
-    if (role === "subscriber") {
-      badges.push("https://cdn.blaze.stream/badges/sub.png");
-    }
-    if (role === "vip") {
-      badges.push("https://cdn.blaze.stream/badges/vip.png");
-    }
-    if (role === "og") {
-      badges.push("https://cdn.blaze.stream/badges/og.png");
-    }
+// Normalize all broadcaster role names Blaze might use
+const broadcasterRoles = ["owner", "broadcaster", "streamer", "creator", "host"];
+
+for (const role of roles) {
+  if (broadcasterRoles.includes(role)) {
+    badges.push("https://cdn.blaze.stream/badges/owner.png");
   }
+  if (role === "moderator") {
+    badges.push("https://cdn.blaze.stream/badges/mod.png");
+  }
+  if (role === "subscriber") {
+    badges.push("https://cdn.blaze.stream/badges/sub.png");
+  }
+  if (role === "vip") {
+    badges.push("https://cdn.blaze.stream/badges/vip.png");
+  }
+  if (role === "og") {
+    badges.push("https://cdn.blaze.stream/badges/og.png");
+  }
+}
 
   return {
     platform: "blaze",
