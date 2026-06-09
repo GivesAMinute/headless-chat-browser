@@ -2,6 +2,31 @@
 import axios from "axios";
 
 /* ---------------------------------------------------------
+   ⭐ Build HTML from Blaze message parts (text, emotes, stickers)
+--------------------------------------------------------- */
+function buildBlazeHTML(msg) {
+  const parts = msg.parts || msg.fragments || msg.contentParts || [];
+
+  return parts
+    .map((p) => {
+      if (p.type === "text") {
+        return p.text;
+      }
+
+      if (p.type === "emote") {
+        return `<img src="${p.url}" alt="${p.name || p.id}" class="emote" />`;
+      }
+
+      if (p.type === "sticker") {
+        return `<img src="${p.url}" alt="${p.name || p.id}" class="sticker" />`;
+      }
+
+      return "";
+    })
+    .join("");
+}
+
+/* ---------------------------------------------------------
    ⭐ BlazePoller — polls Blaze chat every X ms
 --------------------------------------------------------- */
 class BlazePoller {
@@ -17,23 +42,22 @@ class BlazePoller {
   }
 
   async _fetchMessages() {
-  const url = "https://api.blaze.stream/v1/chats/messages";
+    const url = "https://api.blaze.stream/v1/chats/messages";
 
-  const res = await axios.get(url, {
-    headers: {
-      "client-id": this.clientId,
-      Authorization: `Bearer ${this.accessToken}`,
-      Accept: "application/json"
-    },
-    params: {
-      channelId: this.channelId,
-      limit: 50
-    }
-  });
+    const res = await axios.get(url, {
+      headers: {
+        "client-id": this.clientId,
+        Authorization: `Bearer ${this.accessToken}`,
+        Accept: "application/json"
+      },
+      params: {
+        channelId: this.channelId,
+        limit: 50
+      }
+    });
 
-  return res.data?.data?.messages || [];
-}
-
+    return res.data?.data?.messages || [];
+  }
 
   _filterNew(messages) {
     const fresh = [];
@@ -45,7 +69,6 @@ class BlazePoller {
       }
     }
 
-    // Prevent unbounded growth
     if (this.lastSeenIds.size > 2000) {
       const ids = Array.from(this.lastSeenIds).slice(-1000);
       this.lastSeenIds = new Set(ids);
@@ -86,43 +109,10 @@ class BlazePoller {
 }
 
 /* ---------------------------------------------------------
-   ⭐ transformBlazeMessage — normalize Blaze → overlay format
+   ⭐ Normalize Blaze → overlay format
 --------------------------------------------------------- */
 function transformBlazeMessage(msg) {
   const sender = msg.sender || msg.user || {};
-
-  // Blaze messages have structured parts: text, emote, sticker
-  const parts = (msg.parts || msg.fragments || msg.contentParts || []).map((p) => {
-    if (p.type === "text") {
-      return { type: "text", text: p.text };
-    }
-
-    if (p.type === "emote") {
-      return {
-        type: "emote",
-        id: p.id,
-        name: p.name || p.id,
-        url: p.url
-      };
-    }
-
-    if (p.type === "sticker") {
-      return {
-        type: "sticker",
-        id: p.id,
-        name: p.name || p.id,
-        url: p.url
-      };
-    }
-
-    return null;
-  }).filter(Boolean);
-
-  // Fallback plain text
-  const text = parts
-    .filter((p) => p.type === "text")
-    .map((p) => p.text)
-    .join("");
 
   return {
     platform: "blaze",
@@ -130,8 +120,7 @@ function transformBlazeMessage(msg) {
     username: sender.displayName || sender.username || sender.name || "Unknown",
     avatar: sender.avatarUrl || sender.avatar || null,
     badges: sender.roles || sender.badges || [],
-    text,
-    parts,
+    html: buildBlazeHTML(msg),
     timestamp: msg.timestamp || Date.now()
   };
 }
