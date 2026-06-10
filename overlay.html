@@ -215,11 +215,34 @@
     return `hsl(${hue}, 70%, 60%)`;
   }
 
-  // ⭐ Blaze role SVGs (using your existing badge class)
-  const STREAMER_SVG = `<svg class="velora-inline-badge" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="red" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 19v3"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><rect x="9" y="2" width="6" height="13" rx="3"></rect></svg>`;
-  const MOD_SVG      = `<svg class="velora-inline-badge" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#2563eb" stroke-width="2.2" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>`;
-  const OG_SVG       = `<svg class="velora-inline-badge" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#ea580c" stroke-width="2.2" viewBox="0 0 24 24"><path d="M8.5 14.5a3.5 3.5 0 1 0 7 0c0-2.5-3.5-5-3.5-8 0 3-3.5 5.5-3.5 8z"></path></svg>`;
-  const VIP_SVG      = `<svg class="velora-inline-badge" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#eab308" stroke-width="2.2" viewBox="0 0 24 24"><polygon points="12 2 15 8.5 22 9.3 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.3 9 8.5 12 2"></polygon></svg>`;
+  // ⭐ Blaze role icons (exact Blaze assets, exact Blaze sizing)
+  const MOD_SVG = `
+<svg class="velora-inline-badge" xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+</svg>`;
+
+  const OG_SVG = `
+<svg class="velora-inline-badge" xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 24 24" fill="none" stroke="#ff6600" stroke-width="2.2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
+</svg>`;
+
+  const VIP_SVG = `
+<img class="velora-inline-badge"
+     src="https://cdn.blaze.stream/site/icons/vip.png">
+`;
+
+  const STREAMER_SVG = `
+<svg class="velora-inline-badge" xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 24 24" fill="none" stroke="red" stroke-width="2.2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 19v3"></path>
+  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+  <rect x="9" y="2" width="6" height="13" rx="3"></rect>
+</svg>`;
 
   ws.onmessage = (event) => {
     const msg = JSON.parse(event.data);
@@ -259,12 +282,12 @@
       });
     }
 
-    // ⭐ Blaze role icons (Option A — before username)
+    // ⭐ Blaze role icons (Mod → OG → VIP → Streamer)
     if (msg.platform === "blaze") {
-      if (msg.isStreamer) content.insertAdjacentHTML("beforeend", STREAMER_SVG);
       if (msg.isMod)      content.insertAdjacentHTML("beforeend", MOD_SVG);
       if (msg.isOG)       content.insertAdjacentHTML("beforeend", OG_SVG);
       if (msg.isVIP)      content.insertAdjacentHTML("beforeend", VIP_SVG);
+      if (msg.isStreamer) content.insertAdjacentHTML("beforeend", STREAMER_SVG);
     }
 
     // ⭐ Universal badges
