@@ -243,7 +243,18 @@
     const content = document.createElement("div");
     content.className = "content";
 
+    // ⭐ Velora badges
     if (msg.platform === "velora" && msg.badges?.length) {
+      msg.badges.forEach(src => {
+        const b = document.createElement("img");
+        b.src = src;
+        b.className = "velora-inline-badge";
+        content.appendChild(b);
+      });
+    }
+
+    // ⭐ Universal badges (Blaze, Twitch, YouTube, Kick, etc.)
+    if (msg.platform !== "velora" && msg.badges?.length) {
       msg.badges.forEach(src => {
         const b = document.createElement("img");
         b.src = src;
