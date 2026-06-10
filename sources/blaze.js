@@ -42,8 +42,10 @@ function transformBlazeMessage(msg) {
   // ⭐ FORCE broadcaster badge if this is the channel owner
   const CHANNEL_OWNER_ID = process.env.BLAZE_OWNER_ID;
   if (sender.id === CHANNEL_OWNER_ID) {
-    badges.push("https://cdn.blaze.stream/badges/owner.png");
-  }
+  badges.push("https://cdn.blaze.stream/badges/owner.png");
+  console.log("[BLAZE DEBUG] Badges array:", badges);
+}
+
 
   // ⭐ Normal role-based badges for everyone else
   const broadcasterRoles = ["owner", "broadcaster", "streamer", "creator", "host"];
