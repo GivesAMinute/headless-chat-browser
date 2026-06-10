@@ -65,12 +65,16 @@
     display: inline-block;
   }
 
+  /* ⭐ FIXED: No box, no padding, exact Blaze size */
   .velora-inline-badge {
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
     margin-right: 4px;
     vertical-align: middle;
     display: inline-block;
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
   }
 
   .bubble img.chat-image {
@@ -232,7 +236,8 @@
 
   const VIP_SVG = `
 <img class="velora-inline-badge"
-     src="https://cdn.blaze.stream/site/icons/vip.png">
+     src="https://cdn.blaze.stream/site/icons/vip.png"
+     alt="VIP">
 `;
 
   const STREAMER_SVG = `
