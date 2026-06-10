@@ -5,10 +5,12 @@
 <title>Merged Chat Overlay</title>
 
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
   body {
     margin: 0;
     background: transparent;
-    font-family: Inter, sans-serif;
+    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     overflow: hidden;
   }
 
@@ -20,16 +22,27 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    align-items: flex-start;
   }
 
   .msg {
     display: flex;
+    align-items: flex-start;
     gap: 10px;
   }
 
   .platform-icon {
     width: 40px;
     height: 40px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    flex-shrink: 0;
   }
 
   .bubble {
@@ -39,19 +52,63 @@
     border-radius: 14px;
     font-size: 20px;
     max-width: 90%;
+    display: inline-block;
     backdrop-filter: blur(6px);
+    animation: fadeIn 0.8s ease-out;
+    word-break: break-word;
+    white-space: normal;
   }
 
   .username {
     font-weight: 600;
-    margin-right: 6px;
+    margin-bottom: 4px;
+    display: inline-block;
   }
 
-  .role-icon {
+  .velora-inline-badge {
     width: 16px;
     height: 16px;
-    vertical-align: middle;
     margin-right: 4px;
+    vertical-align: middle;
+    display: inline-block;
+  }
+
+  .bubble img.chat-image {
+    width: 64px;
+    height: 64px;
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  .bubble img:not(.chat-image) {
+    max-height: 80px;
+  }
+
+  .bubble img.scaled-emote {
+    width: 48px !important;
+    height: 48px !important;
+    vertical-align: middle;
+    display: inline-block;
+  }
+
+  .bubble video {
+    display: block;
+    margin-top: 6px;
+    max-height: 140px;
+  }
+
+  .fadeOut {
+    animation: fadeOut 1.2s forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-20px); }
   }
 </style>
 </head>
@@ -60,62 +117,200 @@
 <div id="messages"></div>
 
 <script>
-const STREAMER_SVG = `
-<svg class="role-icon" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="red" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 19v3"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><rect x="9" y="2" width="6" height="13" rx="3"></rect></svg>
-`;
+  if (window.__CHAT_OVERLAY_CONNECTED__) {
+    console.log("Overlay already connected, skipping duplicate WS");
+    throw new Error("Duplicate overlay instance");
+  }
+  window.__CHAT_OVERLAY_CONNECTED__ = true;
 
-const MOD_SVG = `
-<svg class="role-icon" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#2563eb" stroke-width="2.2" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
-`;
+  const ws = new WebSocket("wss://" + location.host);
 
-const OG_SVG = `
-<svg class="role-icon" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#ea580c" stroke-width="2.2" viewBox="0 0 24 24"><path d="M8.5 14.5a3.5 3.5 0 1 0 7 0c0-2.5-3.5-5-3.5-8 0 3-3.5 5.5-3.5 8z"></path></svg>
-`;
+  const PLATFORM_MAP = {
+    youtube: "youtube",
+    "youtube.com": "youtube",
+    yt: "youtube",
 
-const VIP_SVG = `
-<svg class="role-icon" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#eab308" stroke-width="2.2" viewBox="0 0 24 24"><polygon points="12 2 15 8.5 22 9.3 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.3 9 8.5 12 2"></polygon></svg>
-`;
+    velora: "velora",
+    "velora.live": "velora",
 
-const ws = new WebSocket("wss://" + location.host);
+    pilled: "pilled",
+    "pilled.net": "pilled",
 
-ws.onmessage = (event) => {
-  const msg = JSON.parse(event.data);
+    nimotv: "nimotv",
+    nimo: "nimotv",
 
-  const wrapper = document.createElement("div");
-  wrapper.className = "msg";
+    kick: "kick",
+    "kick.com": "kick",
 
-  const icon = document.createElement("img");
-  icon.className = "platform-icon";
-  icon.src = `/icons/${msg.platform}.png`;
-  wrapper.appendChild(icon);
+    rumble: "rumble",
+    odysee: "odysee",
+    arena: "arena",
 
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
+    blaze: "blaze",
 
-  const content = document.createElement("div");
+    bitchute: "bitchute",
+    vpzone: "vpzone",
 
-  // ⭐ Role icons
-  if (msg.platform === "blaze") {
-    if (msg.isStreamer) content.innerHTML += STREAMER_SVG;
-    if (msg.isMod)      content.innerHTML += MOD_SVG;
-    if (msg.isOG)       content.innerHTML += OG_SVG;
-    if (msg.isVIP)      content.innerHTML += VIP_SVG;
+    twitch: "twitch",
+    beam: null
+  };
+
+  function getPlatformIcon(platform) {
+    platform = platform.toLowerCase();
+    const mapped = PLATFORM_MAP[platform];
+    if (mapped === null) return null;
+    if (mapped) return `/icons/${mapped}.png`;
+    return `/icons/default.png`;
   }
 
-  const name = document.createElement("span");
-  name.className = "username";
-  name.textContent = msg.username;
-  content.appendChild(name);
+  function colorForUsername(name, platform) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = (hash * 31 + name.charCodeAt(i)) | 0;
+    }
+    const index = Math.abs(hash);
 
-  const text = document.createElement("span");
-  text.innerHTML = msg.html;
-  content.appendChild(text);
+    const palettes = {
+      twitch: [
+        "#9146FF", "#A970FF", "#B98CFF", "#7C4DFF", "#9B59FF",
+        "#8E44FF", "#A55BFF", "#C39BFF", "#6E3CE6", "#B084FF",
+        "#9F6BFF", "#7A3FE6"
+      ],
+      youtube: [
+        "#FF0000", "#FF1A1A", "#FF3333", "#FF4D4D", "#FF6666",
+        "#E60000", "#CC0000", "#FF5E57", "#FF2D55", "#FF3B30",
+        "#FF6A6A", "#FF7F7F"
+      ],
+      velora: [
+        "#F5C451", "#F7D06A", "#FFD97A", "#E8B23A", "#E6A93E",
+        "#FFCC66", "#FFDB85", "#F2B94F", "#DFA63A", "#F8D88C",
+        "#E4B75A", "#F0C76E"
+      ],
+      kick: [
+        "#00FF66", "#00E65C", "#00CC52", "#00B347", "#00993D",
+        "#00FF7A", "#00FF55", "#00E64D", "#00CC44", "#00B33A",
+        "#00FF88", "#00FF99"
+      ],
+      rumble: [
+        "#00AA44", "#00993D", "#008833", "#00772A", "#006622",
+        "#00BB55", "#00CC66", "#00994D", "#008040", "#007338",
+        "#00D46A", "#00C45C"
+      ],
+      beam: [
+        "#00E0FF", "#33E8FF", "#66F0FF", "#00C8E6", "#00B0CC",
+        "#00F2FF", "#4DF6FF", "#80FAFF", "#00D4E6", "#00BED1",
+        "#00E8F2", "#33F0FF"
+      ],
+      blaze: [
+        "#FF8800", "#FF9C33", "#FFB566", "#FF7A00",
+        "#E66F00", "#CC6400", "#FF9933", "#FFB266",
+        "#FF8C1A", "#FF751A", "#E67300", "#CC6600"
+      ]
+    };
 
-  bubble.appendChild(content);
-  wrapper.appendChild(bubble);
+    const palette = palettes[platform];
+    if (palette) return palette[index % palette.length];
 
-  document.getElementById("messages").appendChild(wrapper);
-};
+    const hue = index % 360;
+    return `hsl(${hue}, 70%, 60%)`;
+  }
+
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "msg";
+
+    if (msg.platform === "beam" && msg.avatar) {
+      const img = document.createElement("img");
+      img.className = "avatar";
+      img.src = msg.avatar;
+      wrapper.appendChild(img);
+    } else {
+      const iconPath = getPlatformIcon(msg.platform);
+      if (iconPath) {
+        const icon = document.createElement("img");
+        icon.className = "platform-icon";
+        icon.src = iconPath;
+        icon.onerror = () => icon.remove();
+        wrapper.appendChild(icon);
+      }
+    }
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+
+    const content = document.createElement("div");
+    content.className = "content";
+
+    // ⭐ Velora badges
+    if (msg.platform === "velora" && msg.badges?.length) {
+      msg.badges.forEach(src => {
+        const b = document.createElement("img");
+        b.src = src;
+        b.className = "velora-inline-badge";
+        content.appendChild(b);
+      });
+    }
+
+    // ⭐ Universal badges (Blaze, Twitch, YouTube, Kick, etc.)
+    if (msg.platform !== "velora" && msg.badges?.length) {
+      msg.badges.forEach(src => {
+        const b = document.createElement("img");
+        b.src = src;
+        b.className = "velora-inline-badge";
+        content.appendChild(b);
+      });
+    }
+
+    let cleanName = msg.username;
+    if (msg.platform === "youtube" && cleanName.startsWith("@")) {
+      cleanName = cleanName.substring(1);
+    }
+
+    const name = document.createElement("div");
+    name.className = "username";
+    name.textContent = cleanName;
+    name.style.color = colorForUsername(cleanName, msg.platform);
+    content.appendChild(name);
+
+    const text = document.createElement("div");
+    text.innerHTML = msg.html;
+
+    text.querySelectorAll("img").forEach(img => {
+      const isSmall =
+        (img.naturalWidth && img.naturalWidth <= 40) ||
+        (img.width && img.width <= 40);
+
+      if (!isSmall) return;
+
+      if (msg.platform === "youtube" ||
+          msg.platform === "velora" ||
+          msg.platform === "blaze") {
+        img.classList.add("scaled-emote");
+      }
+    });
+
+    text.querySelectorAll("video").forEach(v => {
+      v.muted = true;
+      v.autoplay = true;
+      v.loop = true;
+      v.playsInline = true;
+      v.play().catch(() => {});
+    });
+
+    content.appendChild(text);
+
+    bubble.appendChild(content);
+    wrapper.appendChild(bubble);
+
+    document.getElementById("messages").appendChild(wrapper);
+
+    setTimeout(() => {
+      bubble.classList.add("fadeOut");
+      setTimeout(() => wrapper.remove(), 1200);
+    }, 45000);
+  };
 </script>
 </body>
 </html>
