@@ -65,16 +65,36 @@
     display: inline-block;
   }
 
-  /* ⭐ FIXED: No box, no padding, exact Blaze size */
   .velora-inline-badge {
     width: 12px;
     height: 12px;
     margin-right: 4px;
     vertical-align: middle;
     display: inline-block;
-    background: none !important;
-    border: none !important;
-    padding: 0 !important;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+
+  /* Blaze-style VIP pill badge */
+  .blaze-vip-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 6px;
+    border-radius: 9999px;
+    border: 1px solid #2563eb; /* primary-600-ish */
+    color: #2563eb;
+    font-size: 10px;
+    line-height: 1;
+    margin-right: 4px;
+    background: transparent;
+  }
+
+  .blaze-vip-badge img {
+    width: 12px;
+    height: 12px;
+    display: inline-block;
   }
 
   .bubble img.chat-image {
@@ -219,7 +239,7 @@
     return `hsl(${hue}, 70%, 60%)`;
   }
 
-  // ⭐ Blaze role icons (exact Blaze assets, exact Blaze sizing)
+  // Blaze role icons (using Blaze’s own shapes/asset)
   const MOD_SVG = `
 <svg class="velora-inline-badge" xmlns="http://www.w3.org/2000/svg"
      viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2"
@@ -228,17 +248,17 @@
 </svg>`;
 
   const OG_SVG = `
-<svg class="velora-inline-badge" xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 24 24" fill="none" stroke="#ff6600" stroke-width="2.2"
+<svg class="velora-inline-badge" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
      stroke-linecap="round" stroke-linejoin="round">
   <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
 </svg>`;
 
   const VIP_SVG = `
-<img class="velora-inline-badge"
-     src="https://cdn.blaze.stream/site/icons/vip.png"
-     alt="VIP">
-`;
+<span class="blaze-vip-badge">
+  <img src="https://cdn.blaze.stream/site/icons/vip.png" alt="VIP">
+  <span>VIP</span>
+</span>`;
 
   const STREAMER_SVG = `
 <svg class="velora-inline-badge" xmlns="http://www.w3.org/2000/svg"
@@ -277,7 +297,7 @@
     const content = document.createElement("div");
     content.className = "content";
 
-    // ⭐ Velora badges
+    // Velora badges
     if (msg.platform === "velora" && msg.badges?.length) {
       msg.badges.forEach(src => {
         const b = document.createElement("img");
@@ -287,7 +307,7 @@
       });
     }
 
-    // ⭐ Blaze role icons (Mod → OG → VIP → Streamer)
+    // Blaze role icons (Mod → OG → VIP → Streamer)
     if (msg.platform === "blaze") {
       if (msg.isMod)      content.insertAdjacentHTML("beforeend", MOD_SVG);
       if (msg.isOG)       content.insertAdjacentHTML("beforeend", OG_SVG);
@@ -295,7 +315,7 @@
       if (msg.isStreamer) content.insertAdjacentHTML("beforeend", STREAMER_SVG);
     }
 
-    // ⭐ Universal badges
+    // Universal badges
     if (msg.platform !== "velora" && msg.badges?.length) {
       msg.badges.forEach(src => {
         const b = document.createElement("img");
