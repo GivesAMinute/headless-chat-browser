@@ -65,14 +65,14 @@
     display: inline-block;
   }
 
-  /* Blaze OG badge */
+  /* OG: outline-only orange rectangle, transparent fill */
   .blaze-og-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #ff6600;
     border: 1px solid #ff6600;
-    color: white;
+    color: #ff6600;
+    background: transparent;
     padding: 1px 4px;
     border-radius: 4px;
     margin-right: 4px;
@@ -84,14 +84,14 @@
     height: 12px;
   }
 
-  /* Blaze VIP badge */
+  /* VIP: outline-only yellow rectangle, transparent fill, icon + text */
   .blaze-vip-badge {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    background: #2563eb;
-    border: 1px solid #2563eb;
-    color: white;
+    border: 1px solid #facc15; /* yellow-ish, matching icon vibe */
+    color: #facc15;
+    background: transparent;
     padding: 1px 6px;
     border-radius: 4px;
     font-size: 10px;
@@ -258,7 +258,7 @@
     return `hsl(${hue}, 70%, 60%)`;
   }
 
-  // Blaze role icons (exact Blaze shapes)
+  // Blaze role icons
   const MOD_SVG = `
 <svg class="velora-inline-badge" xmlns="http://www.w3.org/2000/svg"
      viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2"
@@ -269,7 +269,7 @@
   const OG_SVG = `
 <span class="blaze-og-badge">
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-       fill="none" stroke="white" stroke-width="2.2"
+       fill="none" stroke="currentColor" stroke-width="2.2"
        stroke-linecap="round" stroke-linejoin="round">
     <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
   </svg>
