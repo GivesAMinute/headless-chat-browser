@@ -105,10 +105,10 @@
     height: 12px;
   }
 
-  /* 2× size for moderator + streamer icons */
+  /* 1.5× size for moderator + streamer icons */
   .blaze-large-icon {
-    width: 24px !important;
-    height: 24px !important;
+    width: 18px !important;
+    height: 18px !important;
     margin-right: 4px;
     vertical-align: middle;
   }
@@ -369,13 +369,16 @@
     const content = document.createElement("div");
     content.className = "content";
 
-    /* Velora badges */
+    /* Velora badges WITH TOOLTIP */
     if (msg.platform === "velora" && msg.badges?.length) {
       msg.badges.forEach(src => {
-        const b = document.createElement("img");
-        b.src = src;
-        b.className = "velora-inline-badge";
-        content.appendChild(b);
+        const label = src.split("/").pop().replace(/\.(png|svg)/, "");
+        content.insertAdjacentHTML("beforeend", `
+          <span class="tooltip-wrapper">
+            <img class="velora-inline-badge" src="${src}">
+            <span class="tooltip-bubble">${label}</span>
+          </span>
+        `);
       });
     }
 
@@ -387,13 +390,16 @@
       if (msg.isStreamer) content.insertAdjacentHTML("beforeend", STREAMER_SVG);
     }
 
-    /* Universal badges */
+    /* Universal badges WITH TOOLTIP */
     if (msg.platform !== "velora" && msg.badges?.length) {
       msg.badges.forEach(src => {
-        const b = document.createElement("img");
-        b.src = src;
-        b.className = "velora-inline-badge";
-        content.appendChild(b);
+        const label = src.split("/").pop().replace(/\.(png|svg)/, "");
+        content.insertAdjacentHTML("beforeend", `
+          <span class="tooltip-wrapper">
+            <img class="velora-inline-badge" src="${src}">
+            <span class="tooltip-bubble">${label}</span>
+          </span>
+        `);
       });
     }
 
