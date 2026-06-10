@@ -253,6 +253,10 @@ function startBlazeEventSub(broadcast) {
    ⭐ startBlaze — REST + EventSub
 --------------------------------------------------------- */
 export function startBlaze(broadcast) {
+
+  // ⭐ DEBUG: Confirm OWNER ID is loaded
+  console.log("[BLAZE DEBUG] OWNER ID:", process.env.BLAZE_OWNER_ID);
+
   const channelId = process.env.BLAZE_CHANNEL_ID;
   const clientId = process.env.BLAZE_CLIENT_ID;
   const accessToken = process.env.BLAZE_ACCESS_TOKEN;
