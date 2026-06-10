@@ -32,25 +32,17 @@ function transformBlazeMessage(msg) {
   let sender = {};
 
   /* ---------------------------------------------------------
-     ⭐ RAW SENDER EXTRACTION
-     Blaze REST returns duplicate "sender" keys.
-     JSON.parse keeps the LAST one, but the FIRST one is correct.
-     So we extract the FIRST sender block manually.
+     ⭐ RAW SENDER EXTRACTION (fixes duplicate sender keys)
   --------------------------------------------------------- */
   try {
     const raw = JSON.stringify(msg);
-
-    // Match the FIRST sender block
     const match = raw.match(/"sender":\s*({[^}]+})/);
-
-    if (match) {
-      sender = JSON.parse(match[1]);
-    }
+    if (match) sender = JSON.parse(match[1]);
   } catch (err) {
     console.log("[BLAZE DEBUG] Sender parse error:", err);
   }
 
-  // ⭐ Fallbacks if raw extraction fails
+  // Fallbacks
   sender =
     sender ||
     msg.sender?.sender ||
@@ -60,7 +52,7 @@ function transformBlazeMessage(msg) {
     msg.author ||
     {};
 
-  // ⭐ DEBUG HOOK — print your sender object if it's you
+  // Debug your own messages
   if (
     sender.displayName === "GivesAMinute" ||
     sender.username === "GivesAMinute" ||
@@ -74,7 +66,6 @@ function transformBlazeMessage(msg) {
 
   /* ---------------------------------------------------------
      ⭐ FORCE broadcaster badge
-     Using String() normalization to avoid type mismatches
   --------------------------------------------------------- */
   const CHANNEL_OWNER_ID = process.env.BLAZE_OWNER_ID;
 
@@ -84,7 +75,7 @@ function transformBlazeMessage(msg) {
   }
 
   /* ---------------------------------------------------------
-     ⭐ Normal role-based badges
+     ⭐ Role-based badges (fallback)
   --------------------------------------------------------- */
   const broadcasterRoles = ["owner", "broadcaster", "streamer", "creator", "host"];
 
@@ -118,7 +109,7 @@ function transformBlazeMessage(msg) {
 }
 
 /* ---------------------------------------------------------
-   ⭐ Blaze REST Poller — actual chat messages
+   ⭐ Blaze REST Poller — fallback chat messages
 --------------------------------------------------------- */
 class BlazePoller {
   constructor({ channelId, clientId, accessToken, intervalMs = 1000, onMessages }) {
@@ -174,7 +165,6 @@ class BlazePoller {
     try {
       const messages = await this._fetchMessages();
 
-      // ⭐ DEBUG HOOK — print ALL raw REST messages
       console.log("[BLAZE DEBUG] Raw REST messages:", messages);
 
       const newOnes = this._filterNew(messages);
@@ -204,7 +194,7 @@ class BlazePoller {
 }
 
 /* ---------------------------------------------------------
-   ⭐ Blaze EventSub — chat events (delete, clear, bans, subs, raids)
+   ⭐ Blaze EventSub — REAL chat messages (with badges)
 --------------------------------------------------------- */
 function startBlazeEventSub(broadcast) {
   const channelId = process.env.BLAZE_CHANNEL_ID;
@@ -224,6 +214,7 @@ function startBlazeEventSub(broadcast) {
     console.log("[BLAZE] EventSub session:", sessionId);
 
     const subs = [
+      "channel.chat.message",        // ⭐ NEW: REAL chat messages
       "channel.chat.message_delete",
       "channel.chat.clear",
       "channel.ban",
@@ -262,16 +253,30 @@ function startBlazeEventSub(broadcast) {
   socket.on("eventsub", ({ metadata, payload }) => {
     if (!metadata || !metadata.subscriptionType) return;
 
-    if (
-      payload?.user?.displayName === "GivesAMinute" ||
-      payload?.user?.username === "GivesAMinute" ||
-      payload?.user?.slug === "givesaminute"
-    ) {
-      console.log("[BLAZE DEBUG] EventSub sender object:", payload.user);
-    }
-
     const type = metadata.subscriptionType;
 
+    /* ---------------------------------------------------------
+       ⭐ REAL CHAT MESSAGE PAYLOAD
+       This contains the REAL badge data we need.
+    --------------------------------------------------------- */
+    if (type === "channel.chat.message") {
+      console.log("[BLAZE DEBUG] CHAT MESSAGE PAYLOAD:", payload);
+
+      // Send raw payload to overlay for now
+      broadcast({
+        platform: "blaze",
+        id: payload.id,
+        username: payload.user?.displayName || payload.user?.username,
+        avatar: payload.user?.avatarUrl,
+        badges: payload.user?.badges || [],
+        html: extractMessage(payload),
+        timestamp: payload.createdAt
+      });
+
+      return;
+    }
+
+    // Other EventSub events
     broadcast({
       platform: "blaze",
       type,
@@ -293,8 +298,6 @@ function startBlazeEventSub(broadcast) {
    ⭐ startBlaze — REST + EventSub
 --------------------------------------------------------- */
 export function startBlaze(broadcast) {
-
-  // ⭐ DEBUG: Confirm OWNER ID is loaded
   console.log("[BLAZE DEBUG] OWNER ID:", process.env.BLAZE_OWNER_ID);
 
   const channelId = process.env.BLAZE_CHANNEL_ID;
@@ -306,6 +309,7 @@ export function startBlaze(broadcast) {
     return;
   }
 
+  // REST fallback
   const poller = new BlazePoller({
     channelId,
     clientId,
@@ -321,6 +325,7 @@ export function startBlaze(broadcast) {
 
   poller.start();
 
+  // REAL chat messages
   startBlazeEventSub(broadcast);
 
   console.log("[BLAZE] Poller + EventSub started");
