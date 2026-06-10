@@ -29,8 +29,30 @@ function extractMessage(msg) {
    ⭐ Normalize Blaze → overlay format (with badges + debug)
 --------------------------------------------------------- */
 function transformBlazeMessage(msg) {
-  // ⭐ Normalize sender across all Blaze shapes
-  const sender =
+  let sender = {};
+
+  /* ---------------------------------------------------------
+     ⭐ RAW SENDER EXTRACTION
+     Blaze REST returns duplicate "sender" keys.
+     JSON.parse keeps the LAST one, but the FIRST one is correct.
+     So we extract the FIRST sender block manually.
+  --------------------------------------------------------- */
+  try {
+    const raw = JSON.stringify(msg);
+
+    // Match the FIRST sender block
+    const match = raw.match(/"sender":\s*({[^}]+})/);
+
+    if (match) {
+      sender = JSON.parse(match[1]);
+    }
+  } catch (err) {
+    console.log("[BLAZE DEBUG] Sender parse error:", err);
+  }
+
+  // ⭐ Fallbacks if raw extraction fails
+  sender =
+    sender ||
     msg.sender?.sender ||
     msg.sender?.user ||
     msg.sender ||
@@ -50,7 +72,10 @@ function transformBlazeMessage(msg) {
   const badges = [];
   const roles = sender.roles || [];
 
-  // ⭐ FORCE broadcaster badge if this is the channel owner
+  /* ---------------------------------------------------------
+     ⭐ FORCE broadcaster badge
+     Using String() normalization to avoid type mismatches
+  --------------------------------------------------------- */
   const CHANNEL_OWNER_ID = process.env.BLAZE_OWNER_ID;
 
   if (String(sender.id) === String(CHANNEL_OWNER_ID)) {
@@ -58,7 +83,9 @@ function transformBlazeMessage(msg) {
     console.log("[BLAZE DEBUG] Badges array:", badges);
   }
 
-  // ⭐ Normal role-based badges for everyone else
+  /* ---------------------------------------------------------
+     ⭐ Normal role-based badges
+  --------------------------------------------------------- */
   const broadcasterRoles = ["owner", "broadcaster", "streamer", "creator", "host"];
 
   for (const role of roles) {
