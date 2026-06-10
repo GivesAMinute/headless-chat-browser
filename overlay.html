@@ -65,7 +65,7 @@
     display: inline-block;
   }
 
-  /* OG: outline-only orange rectangle, transparent fill */
+  /* OG: outline-only orange rectangle */
   .blaze-og-badge {
     display: inline-flex;
     align-items: center;
@@ -84,12 +84,12 @@
     height: 12px;
   }
 
-  /* VIP: outline-only yellow rectangle, transparent fill, icon + text */
+  /* VIP: outline-only yellow rectangle */
   .blaze-vip-badge {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    border: 1px solid #facc15; /* yellow-ish, matching icon vibe */
+    border: 1px solid #facc15;
     color: #facc15;
     background: transparent;
     padding: 1px 6px;
@@ -105,6 +105,14 @@
     height: 12px;
   }
 
+  /* 2× size for moderator + streamer icons */
+  .blaze-large-icon {
+    width: 24px !important;
+    height: 24px !important;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+
   .velora-inline-badge {
     width: 12px;
     height: 12px;
@@ -114,6 +122,32 @@
     background: none !important;
     border: none !important;
     padding: 0 !important;
+  }
+
+  /* Tooltip system */
+  .tooltip-wrapper {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .tooltip-bubble {
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.85);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease-out;
+  }
+
+  .tooltip-wrapper:hover .tooltip-bubble {
+    opacity: 1;
   }
 
   .bubble img.chat-image {
@@ -258,37 +292,52 @@
     return `hsl(${hue}, 70%, 60%)`;
   }
 
-  // Blaze role icons
+  /* -------------------------
+     ROLE ICON DEFINITIONS
+     ------------------------- */
+
   const MOD_SVG = `
-<svg class="velora-inline-badge" xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2"
-     stroke-linecap="round" stroke-linejoin="round">
-  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-</svg>`;
+<span class="tooltip-wrapper">
+  <svg class="blaze-large-icon" xmlns="http://www.w3.org/2000/svg"
+       viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2"
+       stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+  </svg>
+  <span class="tooltip-bubble">Moderator</span>
+</span>`;
 
   const OG_SVG = `
-<span class="blaze-og-badge">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-       fill="none" stroke="currentColor" stroke-width="2.2"
-       stroke-linecap="round" stroke-linejoin="round">
-    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
-  </svg>
+<span class="tooltip-wrapper">
+  <span class="blaze-og-badge">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2.2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+    </svg>
+  </span>
+  <span class="tooltip-bubble">OG</span>
 </span>`;
 
   const VIP_SVG = `
-<span class="blaze-vip-badge">
-  <img src="https://cdn.blaze.stream/site/icons/vip.png" alt="">
-  <span>VIP</span>
+<span class="tooltip-wrapper">
+  <span class="blaze-vip-badge">
+    <img src="https://cdn.blaze.stream/site/icons/vip.png" alt="">
+    <span>VIP</span>
+  </span>
+  <span class="tooltip-bubble">VIP</span>
 </span>`;
 
   const STREAMER_SVG = `
-<svg class="velora-inline-badge" xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 24 24" fill="none" stroke="red" stroke-width="2.2"
-     stroke-linecap="round" stroke-linejoin="round">
-  <path d="M12 19v3"></path>
-  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-  <rect x="9" y="2" width="6" height="13" rx="3"></rect>
-</svg>`;
+<span class="tooltip-wrapper">
+  <svg class="blaze-large-icon" xmlns="http://www.w3.org/2000/svg"
+       viewBox="0 0 24 24" fill="none" stroke="red" stroke-width="2.2"
+       stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 19v3"></path>
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+    <rect x="9" y="2" width="6" height="13" rx="3"></rect>
+  </svg>
+  <span class="tooltip-bubble">Streamer</span>
+</span>`;
 
   ws.onmessage = (event) => {
     const msg = JSON.parse(event.data);
@@ -296,6 +345,7 @@
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
 
+    /* PLATFORM ICON WITH TOOLTIP */
     if (msg.platform === "beam" && msg.avatar) {
       const img = document.createElement("img");
       img.className = "avatar";
@@ -304,11 +354,12 @@
     } else {
       const iconPath = getPlatformIcon(msg.platform);
       if (iconPath) {
-        const icon = document.createElement("img");
-        icon.className = "platform-icon";
-        icon.src = iconPath;
-        icon.onerror = () => icon.remove();
-        wrapper.appendChild(icon);
+        const iconHTML = `
+          <span class="tooltip-wrapper">
+            <img class="platform-icon" src="${iconPath}">
+            <span class="tooltip-bubble">${msg.platform.toUpperCase()}</span>
+          </span>`;
+        wrapper.insertAdjacentHTML("beforeend", iconHTML);
       }
     }
 
@@ -318,7 +369,7 @@
     const content = document.createElement("div");
     content.className = "content";
 
-    // Velora badges
+    /* Velora badges */
     if (msg.platform === "velora" && msg.badges?.length) {
       msg.badges.forEach(src => {
         const b = document.createElement("img");
@@ -328,7 +379,7 @@
       });
     }
 
-    // Blaze role icons (Mod → OG → VIP → Streamer)
+    /* Blaze role icons (Mod → OG → VIP → Streamer) */
     if (msg.platform === "blaze") {
       if (msg.isMod)      content.insertAdjacentHTML("beforeend", MOD_SVG);
       if (msg.isOG)       content.insertAdjacentHTML("beforeend", OG_SVG);
@@ -336,7 +387,7 @@
       if (msg.isStreamer) content.insertAdjacentHTML("beforeend", STREAMER_SVG);
     }
 
-    // Universal badges
+    /* Universal badges */
     if (msg.platform !== "velora" && msg.badges?.length) {
       msg.badges.forEach(src => {
         const b = document.createElement("img");
