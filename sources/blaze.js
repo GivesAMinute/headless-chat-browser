@@ -52,7 +52,8 @@ function transformBlazeMessage(msg) {
 
   // ⭐ FORCE broadcaster badge if this is the channel owner
   const CHANNEL_OWNER_ID = process.env.BLAZE_OWNER_ID;
-  if (sender.id === CHANNEL_OWNER_ID) {
+
+  if (String(sender.id) === String(CHANNEL_OWNER_ID)) {
     badges.push("https://cdn.blaze.stream/badges/owner.png");
     console.log("[BLAZE DEBUG] Badges array:", badges);
   }
