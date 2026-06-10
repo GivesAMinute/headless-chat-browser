@@ -29,10 +29,21 @@ function extractMessage(msg) {
    ⭐ Normalize Blaze → overlay format (with badges + debug)
 --------------------------------------------------------- */
 function transformBlazeMessage(msg) {
-  const sender = msg.sender || msg.user || {};
+  // ⭐ Normalize sender across all Blaze shapes
+  const sender =
+    msg.sender?.sender ||
+    msg.sender?.user ||
+    msg.sender ||
+    msg.user ||
+    msg.author ||
+    {};
 
-  // ⭐ DEBUG HOOK #1 — print your sender object if it's you
-  if (sender.username === "GivesAMinute") {
+  // ⭐ DEBUG HOOK — print your sender object if it's you
+  if (
+    sender.displayName === "GivesAMinute" ||
+    sender.username === "GivesAMinute" ||
+    sender.slug === "givesaminute"
+  ) {
     console.log("[BLAZE DEBUG] Sender object:", sender);
   }
 
@@ -42,10 +53,9 @@ function transformBlazeMessage(msg) {
   // ⭐ FORCE broadcaster badge if this is the channel owner
   const CHANNEL_OWNER_ID = process.env.BLAZE_OWNER_ID;
   if (sender.id === CHANNEL_OWNER_ID) {
-  badges.push("https://cdn.blaze.stream/badges/owner.png");
-  console.log("[BLAZE DEBUG] Badges array:", badges);
-}
-
+    badges.push("https://cdn.blaze.stream/badges/owner.png");
+    console.log("[BLAZE DEBUG] Badges array:", badges);
+  }
 
   // ⭐ Normal role-based badges for everyone else
   const broadcasterRoles = ["owner", "broadcaster", "streamer", "creator", "host"];
@@ -71,7 +81,7 @@ function transformBlazeMessage(msg) {
   return {
     platform: "blaze",
     id: msg.id,
-    username: sender.displayName || sender.username || "Unknown",
+    username: sender.displayName || sender.username || sender.slug || "Unknown",
     avatar: sender.avatarUrl || null,
     badges,
     html: extractMessage(msg),
@@ -136,7 +146,7 @@ class BlazePoller {
     try {
       const messages = await this._fetchMessages();
 
-      // ⭐ DEBUG HOOK #2 — print ALL raw REST messages
+      // ⭐ DEBUG HOOK — print ALL raw REST messages
       console.log("[BLAZE DEBUG] Raw REST messages:", messages);
 
       const newOnes = this._filterNew(messages);
@@ -222,13 +232,13 @@ function startBlazeEventSub(broadcast) {
   });
 
   socket.on("eventsub", ({ metadata, payload }) => {
-    // ⭐ Ignore non-eventsub packets (fixes crash)
-    if (!metadata || !metadata.subscriptionType) {
-      return;
-    }
+    if (!metadata || !metadata.subscriptionType) return;
 
-    // ⭐ DEBUG HOOK #3 — print your EventSub user object
-    if (payload?.user?.username === "GivesAMinute") {
+    if (
+      payload?.user?.displayName === "GivesAMinute" ||
+      payload?.user?.username === "GivesAMinute" ||
+      payload?.user?.slug === "givesaminute"
+    ) {
       console.log("[BLAZE DEBUG] EventSub sender object:", payload.user);
     }
 
@@ -268,7 +278,6 @@ export function startBlaze(broadcast) {
     return;
   }
 
-  // ⭐ REST chat messages
   const poller = new BlazePoller({
     channelId,
     clientId,
@@ -284,7 +293,6 @@ export function startBlaze(broadcast) {
 
   poller.start();
 
-  // ⭐ EventSub events
   startBlazeEventSub(broadcast);
 
   console.log("[BLAZE] Poller + EventSub started");
