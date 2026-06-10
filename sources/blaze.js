@@ -2,9 +2,6 @@
 import axios from "axios";
 import { io } from "socket.io-client";
 
-/* ---------------------------------------------------------
-   ⭐ Extract message text from any Blaze message shape
---------------------------------------------------------- */
 function extractMessage(msg) {
   if (msg.message) return msg.message;
   if (msg.content) return msg.content;
@@ -25,24 +22,15 @@ function extractMessage(msg) {
   return "";
 }
 
-/* ---------------------------------------------------------
-   ⭐ Normalize Blaze → overlay format (with badges + debug)
---------------------------------------------------------- */
-function transformBlazeMessage(msg) {
+function normalizeSender(msg) {
   let sender = {};
 
-  /* ---------------------------------------------------------
-     ⭐ RAW SENDER EXTRACTION (fixes duplicate sender keys)
-  --------------------------------------------------------- */
   try {
     const raw = JSON.stringify(msg);
     const match = raw.match(/"sender":\s*({[^}]+})/);
     if (match) sender = JSON.parse(match[1]);
-  } catch (err) {
-    console.log("[BLAZE DEBUG] Sender parse error:", err);
-  }
+  } catch {}
 
-  // Fallbacks
   sender =
     sender ||
     msg.sender?.sender ||
@@ -52,65 +40,32 @@ function transformBlazeMessage(msg) {
     msg.author ||
     {};
 
-  // Debug your own messages
-  if (
-    sender.displayName === "GivesAMinute" ||
-    sender.username === "GivesAMinute" ||
-    sender.slug === "givesaminute"
-  ) {
-    console.log("[BLAZE DEBUG] Sender object:", sender);
-  }
+  return sender;
+}
 
-  const badges = [];
+function transformBlazeMessage(msg) {
+  const sender = normalizeSender(msg);
   const roles = sender.roles || [];
 
-  /* ---------------------------------------------------------
-     ⭐ FORCE broadcaster badge
-  --------------------------------------------------------- */
   const CHANNEL_OWNER_ID = process.env.BLAZE_OWNER_ID;
-
-  if (String(sender.id) === String(CHANNEL_OWNER_ID)) {
-    badges.push("https://cdn.blaze.stream/badges/owner.png");
-    console.log("[BLAZE DEBUG] Badges array:", badges);
-  }
-
-  /* ---------------------------------------------------------
-     ⭐ Role-based badges (fallback)
-  --------------------------------------------------------- */
-  const broadcasterRoles = ["owner", "broadcaster", "streamer", "creator", "host"];
-
-  for (const role of roles) {
-    if (broadcasterRoles.includes(role)) {
-      badges.push("https://cdn.blaze.stream/badges/owner.png");
-    }
-    if (role === "moderator") {
-      badges.push("https://cdn.blaze.stream/badges/mod.png");
-    }
-    if (role === "subscriber") {
-      badges.push("https://cdn.blaze.stream/badges/sub.png");
-    }
-    if (role === "vip") {
-      badges.push("https://cdn.blaze.stream/badges/vip.png");
-    }
-    if (role === "og") {
-      badges.push("https://cdn.blaze.stream/badges/og.png");
-    }
-  }
 
   return {
     platform: "blaze",
     id: msg.id,
     username: sender.displayName || sender.username || sender.slug || "Unknown",
     avatar: sender.avatarUrl || null,
-    badges,
     html: extractMessage(msg),
+
+    // ⭐ Blaze role flags
+    isStreamer: String(sender.id) === String(CHANNEL_OWNER_ID),
+    isMod: roles.includes("moderator"),
+    isOG: roles.includes("og"),
+    isVIP: roles.includes("vip"),
+
     timestamp: msg.timestamp || msg.createdAt || Date.now()
   };
 }
 
-/* ---------------------------------------------------------
-   ⭐ Blaze REST Poller — fallback chat messages
---------------------------------------------------------- */
 class BlazePoller {
   constructor({ channelId, clientId, accessToken, intervalMs = 1000, onMessages }) {
     this.channelId = channelId;
@@ -164,9 +119,6 @@ class BlazePoller {
 
     try {
       const messages = await this._fetchMessages();
-
-      console.log("[BLAZE DEBUG] Raw REST messages:", messages);
-
       const newOnes = this._filterNew(messages);
 
       if (newOnes.length && this.onMessages) {
@@ -193,9 +145,6 @@ class BlazePoller {
   }
 }
 
-/* ---------------------------------------------------------
-   ⭐ Blaze EventSub — REAL chat messages (with badges)
---------------------------------------------------------- */
 function startBlazeEventSub(broadcast) {
   const channelId = process.env.BLAZE_CHANNEL_ID;
   const clientId = process.env.BLAZE_CLIENT_ID;
@@ -211,10 +160,8 @@ function startBlazeEventSub(broadcast) {
   });
 
   socket.on("session_welcome", async ({ sessionId }) => {
-    console.log("[BLAZE] EventSub session:", sessionId);
-
     const subs = [
-      "channel.chat.message",        // ⭐ NEW: REAL chat messages
+      "channel.chat.message",
       "channel.chat.message_delete",
       "channel.chat.clear",
       "channel.ban",
@@ -242,8 +189,6 @@ function startBlazeEventSub(broadcast) {
             }
           }
         );
-
-        console.log("[BLAZE] Subscribed to", type);
       } catch (err) {
         console.error("[BLAZE] Subscription error:", type, err.response?.data || err.message);
       }
@@ -253,63 +198,35 @@ function startBlazeEventSub(broadcast) {
   socket.on("eventsub", ({ metadata, payload }) => {
     if (!metadata || !metadata.subscriptionType) return;
 
-    const type = metadata.subscriptionType;
+    if (metadata.subscriptionType === "channel.chat.message") {
+      const sender = payload.user || {};
+      const roles = sender.roles || [];
 
-    /* ---------------------------------------------------------
-       ⭐ REAL CHAT MESSAGE PAYLOAD
-       This contains the REAL badge data we need.
-    --------------------------------------------------------- */
-    if (type === "channel.chat.message") {
-      console.log("[BLAZE DEBUG] CHAT MESSAGE PAYLOAD:", payload);
-
-      // Send raw payload to overlay for now
       broadcast({
         platform: "blaze",
         id: payload.id,
-        username: payload.user?.displayName || payload.user?.username,
-        avatar: payload.user?.avatarUrl,
-        badges: payload.user?.badges || [],
+        username: sender.displayName || sender.username,
+        avatar: sender.avatarUrl,
         html: extractMessage(payload),
+
+        isStreamer: sender.isOwner === true,
+        isMod: roles.includes("moderator"),
+        isOG: roles.includes("og"),
+        isVIP: roles.includes("vip"),
+
         timestamp: payload.createdAt
       });
 
       return;
     }
-
-    // Other EventSub events
-    broadcast({
-      platform: "blaze",
-      type,
-      html: `<span class="system">${type.replace("channel.", "")}</span>`,
-      payload
-    });
-  });
-
-  socket.on("connect_error", (err) => {
-    console.error("[BLAZE] EventSub connection failed:", err.message);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("[BLAZE] EventSub disconnected");
   });
 }
 
-/* ---------------------------------------------------------
-   ⭐ startBlaze — REST + EventSub
---------------------------------------------------------- */
 export function startBlaze(broadcast) {
-  console.log("[BLAZE DEBUG] OWNER ID:", process.env.BLAZE_OWNER_ID);
-
   const channelId = process.env.BLAZE_CHANNEL_ID;
   const clientId = process.env.BLAZE_CLIENT_ID;
   const accessToken = process.env.BLAZE_ACCESS_TOKEN;
 
-  if (!clientId || !accessToken) {
-    console.error("[BLAZE] Missing BLAZE_CLIENT_ID or BLAZE_ACCESS_TOKEN");
-    return;
-  }
-
-  // REST fallback
   const poller = new BlazePoller({
     channelId,
     clientId,
@@ -324,9 +241,5 @@ export function startBlaze(broadcast) {
   });
 
   poller.start();
-
-  // REAL chat messages
   startBlazeEventSub(broadcast);
-
-  console.log("[BLAZE] Poller + EventSub started");
 }
