@@ -1,5 +1,7 @@
 // platforms/beam.js
+
 import { colorForUsername } from "../utils/usernameColors.js";
+import { sanitizeHTML } from "../utils/sanitizeHTML.js";
 
 export function renderBeamMessage(msg) {
   const wrapper = document.createElement("div");
@@ -13,7 +15,6 @@ export function renderBeamMessage(msg) {
     wrapper.appendChild(img);
   }
 
-  // Bubble
   const bubble = document.createElement("div");
   bubble.className = "bubble";
 
@@ -29,9 +30,9 @@ export function renderBeamMessage(msg) {
 
   // Message HTML
   const text = document.createElement("div");
-  text.innerHTML = msg.html;
+  text.innerHTML = sanitizeHTML(msg.html);
 
-  // Emote scaling
+  // Emote scaling (Beam style)
   text.querySelectorAll("img").forEach(img => {
     const isSmall =
       (img.naturalWidth && img.naturalWidth <= 40) ||
@@ -65,4 +66,3 @@ export function renderBeamMessage(msg) {
     }
   };
 }
-
