@@ -7,27 +7,35 @@ export function renderBeamMessage(msg) {
   const wrapper = document.createElement("div");
   wrapper.className = "msg beam-msg";
 
-  // ⭐ Beam now uses platform icon instead of user avatar
-  const img = document.createElement("img");
-  img.className = "avatar";
-  img.src = "/icons/beam.png";   // <-- your custom icon
-  wrapper.appendChild(img);
+  // ⭐ Big avatar on the left (platform icon or user avatar)
+  const bigAvatar = document.createElement("img");
+  bigAvatar.className = "avatar";
+  bigAvatar.src = msg.avatar || "/icons/beam.png";
+  wrapper.appendChild(bigAvatar);
 
   const bubble = document.createElement("div");
   bubble.className = "bubble";
 
-  const content = document.createElement("div");
-  content.className = "content";
+  // ⭐ Header row: small avatar + username
+  const header = document.createElement("div");
+  header.className = "header";
 
-  // Username
-  const name = document.createElement("div");
+  const smallAvatar = document.createElement("img");
+  smallAvatar.className = "avatar-small";
+  smallAvatar.src = msg.avatar || "/icons/beam.png";
+  header.appendChild(smallAvatar);
+
+  const name = document.createElement("span");
   name.className = "username";
   name.textContent = msg.username;
   name.style.color = colorForUsername(msg.username, "beam");
-  content.appendChild(name);
+  header.appendChild(name);
 
-  // Message HTML
+  bubble.appendChild(header);
+
+  // ⭐ Text row (indented)
   const text = document.createElement("div");
+  text.className = "text";
   text.innerHTML = sanitizeHTML(msg.html);
 
   // Emote scaling (Beam style)
@@ -50,8 +58,7 @@ export function renderBeamMessage(msg) {
     v.play().catch(() => {});
   });
 
-  content.appendChild(text);
-  bubble.appendChild(content);
+  bubble.appendChild(text);
   wrapper.appendChild(bubble);
 
   return {
