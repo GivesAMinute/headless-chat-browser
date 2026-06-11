@@ -4,7 +4,7 @@ import { sanitizeHTML } from "../utils/sanitizeHTML.js";
 import { colorForUsername } from "../utils/usernameColors.js";
 import { renderUniversalBadges } from "../badges/universalBadges.js";
 
-export function renderYouTube(msg) {
+export function renderYouTubeMessage(msg) {
   const wrapper = document.createElement("div");
   wrapper.className = "msg";
 
@@ -19,31 +19,33 @@ export function renderYouTube(msg) {
   const content = document.createElement("div");
   content.className = "content";
 
-  // Badges
   if (msg.badges?.length) {
     content.insertAdjacentHTML("beforeend", renderUniversalBadges(msg.badges));
   }
 
-  // Username cleanup
-  let cleanName = msg.username;
-  if (cleanName.startsWith("@")) cleanName = cleanName.substring(1);
-
   const name = document.createElement("div");
   name.className = "username";
-  name.textContent = cleanName;
-  name.style.color = colorForUsername(cleanName, "youtube");
+  name.textContent = msg.username;
+  name.style.color = colorForUsername(msg.username, "youtube");
   content.appendChild(name);
 
   const text = document.createElement("div");
   text.innerHTML = sanitizeHTML(msg.html);
 
-  // Emote scaling
   text.querySelectorAll("img").forEach(img => {
     const isSmall =
       (img.naturalWidth && img.naturalWidth <= 40) ||
       (img.width && img.width <= 40);
 
     if (isSmall) img.classList.add("scaled-emote");
+  });
+
+  text.querySelectorAll("video").forEach(v => {
+    v.muted = true;
+    v.autoplay = true;
+    v.loop = true;
+    v.playsInline = true;
+    v.play().catch(() => {});
   });
 
   content.appendChild(text);
