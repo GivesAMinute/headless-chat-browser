@@ -1,20 +1,19 @@
 // platforms/beam.js
+import { colorForUsername } from "./utils/color.js";
 
-import { sanitizeHTML } from "../utils/sanitizeHTML.js";
-import { colorForUsername } from "../utils/usernameColors.js";
-
-export function renderBeam(msg) {
+export function renderBeamMessage(msg) {
   const wrapper = document.createElement("div");
-  wrapper.className = "msg";
+  wrapper.className = "msg beam-msg";
 
-  // Beam uses avatar instead of platform icon
+  // Avatar (Beam uses avatar instead of platform icon)
   if (msg.avatar) {
-    const avatar = document.createElement("img");
-    avatar.className = "avatar";
-    avatar.src = msg.avatar;
-    wrapper.appendChild(avatar);
+    const img = document.createElement("img");
+    img.className = "avatar";
+    img.src = msg.avatar;
+    wrapper.appendChild(img);
   }
 
+  // Bubble
   const bubble = document.createElement("div");
   bubble.className = "bubble";
 
@@ -30,7 +29,7 @@ export function renderBeam(msg) {
 
   // Message HTML
   const text = document.createElement("div");
-  text.innerHTML = sanitizeHTML(msg.html);
+  text.innerHTML = msg.html;
 
   // Emote scaling
   text.querySelectorAll("img").forEach(img => {
@@ -38,10 +37,12 @@ export function renderBeam(msg) {
       (img.naturalWidth && img.naturalWidth <= 40) ||
       (img.width && img.width <= 40);
 
-    if (isSmall) img.classList.add("scaled-emote");
+    if (isSmall) {
+      img.classList.add("scaled-emote");
+    }
   });
 
-  // Video autoplay
+  // Stickers (videos)
   text.querySelectorAll("video").forEach(v => {
     v.muted = true;
     v.autoplay = true;
@@ -56,6 +57,11 @@ export function renderBeam(msg) {
 
   return {
     element: wrapper,
-    cleanup: () => {}
+    cleanup() {
+      setTimeout(() => {
+        bubble.classList.add("fadeOut");
+        setTimeout(() => wrapper.remove(), 600);
+      }, 45000);
+    }
   };
 }
