@@ -1,4 +1,4 @@
-// utils/usernameColors.js
+// platforms/utils/usernameColors.js
 
 export function colorForUsername(name, platform) {
   let hash = 0;

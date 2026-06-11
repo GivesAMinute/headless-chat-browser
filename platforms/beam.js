@@ -1,5 +1,5 @@
 // platforms/beam.js
-import { colorForUsername } from "./utils/color.js";
+import { colorForUsername } from "../utils/usernameColors.js";
 
 export function renderBeamMessage(msg) {
   const wrapper = document.createElement("div");
