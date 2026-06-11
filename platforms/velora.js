@@ -4,7 +4,7 @@ import { sanitizeHTML } from "../utils/sanitizeHTML.js";
 import { colorForUsername } from "../utils/usernameColors.js";
 import { renderVeloraBadges } from "../badges/veloraBadges.js";
 
-export function renderVelora(msg) {
+export function renderVeloraMessage(msg) {
   const wrapper = document.createElement("div");
   wrapper.className = "msg";
 
@@ -32,7 +32,6 @@ export function renderVelora(msg) {
   const text = document.createElement("div");
   text.innerHTML = sanitizeHTML(msg.html);
 
-  // Emote scaling
   text.querySelectorAll("img").forEach(img => {
     const isSmall =
       (img.naturalWidth && img.naturalWidth <= 40) ||
@@ -41,7 +40,6 @@ export function renderVelora(msg) {
     if (isSmall) img.classList.add("scaled-emote");
   });
 
-  // Video autoplay
   text.querySelectorAll("video").forEach(v => {
     v.muted = true;
     v.autoplay = true;
