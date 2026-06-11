@@ -1,60 +1,53 @@
 // platforms/blaze.js
 
-import { sanitizeHTML } from "../utils/sanitizeHTML.js";
 import { colorForUsername } from "../utils/usernameColors.js";
-import {
-  MOD_BADGE,
-  OG_BADGE,
-  VIP_BADGE,
-  STREAMER_BADGE
-} from "../badges/blazeBadges.js";
+import { sanitizeHTML } from "../utils/sanitizeHTML.js";
 
 export function renderBlazeMessage(msg) {
   const wrapper = document.createElement("div");
   wrapper.className = "msg blaze-msg";
 
-  const icon = document.createElement("img");
-  icon.className = "platform-icon";
-  icon.src = `/icons/blaze.png`;
-  wrapper.appendChild(icon);
+  // Platform icon (big)
+  const bigAvatar = document.createElement("img");
+  bigAvatar.className = "avatar";
+  bigAvatar.src = "/icons/blaze.png";
+  wrapper.appendChild(bigAvatar);
 
   const bubble = document.createElement("div");
   bubble.className = "bubble";
 
-  const content = document.createElement("div");
-  content.className = "content";
+  // Header row
+  const header = document.createElement("div");
+  header.className = "header";
 
-  if (msg.isMod)      content.insertAdjacentHTML("beforeend", MOD_BADGE);
-  if (msg.isOG)       content.insertAdjacentHTML("beforeend", OG_BADGE);
-  if (msg.isVIP)      content.insertAdjacentHTML("beforeend", VIP_BADGE);
-  if (msg.isStreamer) content.insertAdjacentHTML("beforeend", STREAMER_BADGE);
+  const smallAvatar = document.createElement("img");
+  smallAvatar.className = "avatar-small";
+  smallAvatar.src = msg.avatar || "/icons/blaze.png";
+  header.appendChild(smallAvatar);
 
-  const name = document.createElement("div");
+  const name = document.createElement("span");
   name.className = "username";
   name.textContent = msg.username;
   name.style.color = colorForUsername(msg.username, "blaze");
-  content.appendChild(name);
+  header.appendChild(name);
 
+  // Blaze badges (OG, VIP, Mod, Streamer)
+  if (msg.badges?.length) {
+    msg.badges.forEach(b => {
+      const span = document.createElement("span");
+      span.innerHTML = b.html;
+      header.appendChild(span);
+    });
+  }
+
+  bubble.appendChild(header);
+
+  // Text row
   const text = document.createElement("div");
+  text.className = "text";
   text.innerHTML = sanitizeHTML(msg.html);
 
-  text.querySelectorAll("img").forEach(img => {
-    const isSmall =
-      (img.naturalWidth && img.naturalWidth <= 40) ||
-      (img.width && img.width <= 40);
-    if (isSmall) img.classList.add("scaled-emote");
-  });
-
-  text.querySelectorAll("video").forEach(v => {
-    v.muted = true;
-    v.autoplay = true;
-    v.loop = true;
-    v.playsInline = true;
-    v.play().catch(() => {});
-  });
-
-  content.appendChild(text);
-  bubble.appendChild(content);
+  bubble.appendChild(text);
   wrapper.appendChild(bubble);
 
   return {
