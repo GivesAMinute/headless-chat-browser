@@ -7,10 +7,10 @@ export function renderBeamMessage(msg) {
   const wrapper = document.createElement("div");
   wrapper.className = "msg beam-msg";
 
-  // ⭐ Big avatar on the left (platform icon or user avatar)
+  // ⭐ Big avatar = platform icon (Beam logo)
   const bigAvatar = document.createElement("img");
   bigAvatar.className = "avatar";
-  bigAvatar.src = msg.avatar || "/icons/beam.png";
+  bigAvatar.src = "/icons/beam.png";   // <-- platform icon restored
   wrapper.appendChild(bigAvatar);
 
   const bubble = document.createElement("div");
@@ -22,7 +22,7 @@ export function renderBeamMessage(msg) {
 
   const smallAvatar = document.createElement("img");
   smallAvatar.className = "avatar-small";
-  smallAvatar.src = msg.avatar || "/icons/beam.png";
+  smallAvatar.src = msg.avatar || "/icons/beam.png"; // <-- user avatar here
   header.appendChild(smallAvatar);
 
   const name = document.createElement("span");
