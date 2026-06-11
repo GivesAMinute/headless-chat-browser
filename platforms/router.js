@@ -1,7 +1,5 @@
-// platforms/router.js
-
 import { renderBeamMessage } from "./beam.js";
-import { renderTwitchMessage } from "./titch.js";
+import { renderTwitchMessage } from "./twitch.js";
 import { renderVeloraMessage } from "./velora.js";
 import { renderYouTubeMessage } from "./youtube.js";
 import { renderBlazeMessage } from "./blaze.js";
@@ -27,6 +25,6 @@ export function renderMessage(msg) {
 
     default:
       console.warn("Unknown platform:", platform, msg);
-      return renderBeamMessage(msg); // safe fallback
+      return renderBeamMessage(msg);
   }
 }

@@ -161,30 +161,34 @@
   <div id="messages"></div>
 
   <script type="module">
-    import { renderMessage } from "/platforms/router.js";
+  import { renderMessage } from "/platforms/router.js";
 
-    const messages = document.getElementById("messages");
+  const messages = document.getElementById("messages");
 
-    function connect() {
-      const ws = new WebSocket(`wss://${location.host}`);
+  function connect() {
+    const ws = new WebSocket(`wss://${location.host}`);
 
-      ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
 
-        const { element, cleanup } = renderMessage(msg);
+      const rendered = renderMessage(msg);
+      if (!rendered) {
+        console.warn("Renderer returned nothing for:", msg);
+        return;
+      }
 
-        messages.appendChild(element);
+      const { element, cleanup } = rendered;
 
-        cleanup?.();
-      };
+      messages.appendChild(element);
+      if (cleanup) cleanup();
+    };
 
-      ws.onclose = () => {
-        setTimeout(connect, 2000);
-      };
-    }
+    ws.onclose = () => setTimeout(connect, 2000);
+  }
 
-    connect();
-  </script>
+  connect();
+</script>
+
 </body>
 </html>
 
