@@ -4,7 +4,7 @@ import { sanitizeHTML } from "../utils/sanitizeHTML.js";
 import { colorForUsername } from "../utils/usernameColors.js";
 import { renderUniversalBadges } from "../badges/universalBadges.js";
 
-export function renderTwitch(msg) {
+export function renderTwitchMessage(msg) {
   const wrapper = document.createElement("div");
   wrapper.className = "msg";
 
@@ -32,7 +32,6 @@ export function renderTwitch(msg) {
   const text = document.createElement("div");
   text.innerHTML = sanitizeHTML(msg.html);
 
-  // Emote scaling
   text.querySelectorAll("img").forEach(img => {
     const isSmall =
       (img.naturalWidth && img.naturalWidth <= 40) ||
