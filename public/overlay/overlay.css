@@ -132,8 +132,8 @@ body {
 
 /* Velora inline badge */
 .velora-inline-badge {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   margin-right: 4px;
   vertical-align: middle;
   display: inline-block;
