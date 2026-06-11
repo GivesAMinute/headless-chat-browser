@@ -6,7 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import { startYouTube } from "./sources/youtube.js";
-import { startBlaze } from "./sources/blaze.js";   // ⭐ Clean Blaze integration
+import { startBlaze } from "./sources/blaze.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,7 +14,11 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 8080;
 
+// Static assets
 app.use("/icons", express.static(path.join(__dirname, "public/icons")));
+app.use("/badges", express.static(path.join(__dirname, "badges")));
+app.use("/utils", express.static(path.join(__dirname, "utils")));
+app.use("/overlay", express.static(path.join(__dirname, "overlay")));
 
 let browser;
 let beamPage;
@@ -32,6 +36,9 @@ function broadcast(msg) {
 /* ---------------------------------------------------------
    BEAM CHAT SCRAPER
 --------------------------------------------------------- */
+
+console.log("BEAM_LOCALSTORAGE raw:", process.env.BEAM_LOCALSTORAGE);
+
 async function startBeamChat() {
   console.log("Launching headless browser…");
 
@@ -296,10 +303,11 @@ async function startVeloraChat() {
    EXPRESS + SERVER
 --------------------------------------------------------- */
 app.get("/overlay", (_req, res) => {
-  res.sendFile(path.join(__dirname, "overlay.html"));
+  res.sendFile(path.join(__dirname, "overlay/overlay.html"));
 });
 
 setInterval(() => {
+  if (!process.env.RAILWAY_STATIC_URL) return;
   fetch("https://" + process.env.RAILWAY_STATIC_URL)
     .then(() => console.log("Keep-alive ping sent"))
     .catch(() => {});
@@ -317,9 +325,8 @@ const server = app.listen(port, () => {
     })
     .catch((err) => console.error("Startup error:", err));
 
-  // ⭐ Non-browser sources start immediately
   startYouTube(broadcast);
-  startBlaze(broadcast);   // ⭐ Clean Blaze integration
+  startBlaze(broadcast);
 });
 
 server.on("upgrade", (req, socket, head) => {
