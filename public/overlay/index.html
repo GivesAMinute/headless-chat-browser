@@ -18,7 +18,9 @@
     const messagesContainer = document.getElementById("messages");
 
     // ⭐ Correct WebSocket URL — same as your old working version
-    const ws = new WebSocket("wss://headless-chat-browser-production.up.railway.app");
+    const ws = new WebSocket(
+  location.origin.replace("http", "ws") + "/overlay/"
+);
 
     ws.addEventListener("message", event => {
       let msg;
