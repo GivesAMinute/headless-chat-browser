@@ -12,27 +12,21 @@
   <div id="messages"></div>
 
   <script type="module">
-    import { renderMessage } from "./router.js";
+    // ⭐ Correct path: index.html → overlay → public → root → platforms
+    import { renderMessage } from "../../platforms/router.js";
+
+    console.log("Overlay script loaded");
 
     const messagesContainer = document.getElementById("messages");
 
-    // ⭐ Connect WebSocket to the SAME PATH the overlay is served from
-    // This matches your old working behavior exactly
+    // ⭐ MUST connect to the exact overlay URL
     const ws = new WebSocket(
       location.href.replace("http", "ws")
     );
 
-    ws.addEventListener("open", () => {
-      console.log("WS CONNECTED");
-    });
-
-    ws.addEventListener("error", (e) => {
-      console.log("WS ERROR", e);
-    });
-
-    ws.addEventListener("close", () => {
-      console.log("WS CLOSED");
-    });
+    ws.addEventListener("open", () => console.log("WS CONNECTED"));
+    ws.addEventListener("error", (e) => console.log("WS ERROR", e));
+    ws.addEventListener("close", () => console.log("WS CLOSED"));
 
     ws.addEventListener("message", event => {
       let msg;
