@@ -6,7 +6,7 @@ import { renderVeloraBadges } from "../badges/veloraBadges.js";
 
 export function renderVeloraMessage(msg) {
   const wrapper = document.createElement("div");
-  wrapper.className = "msg";
+  wrapper.className = "msg velora-msg";
 
   const icon = document.createElement("img");
   icon.className = "platform-icon";
@@ -54,6 +54,11 @@ export function renderVeloraMessage(msg) {
 
   return {
     element: wrapper,
-    cleanup: () => {}
+    cleanup() {
+      setTimeout(() => {
+        bubble.classList.add("fadeOut");
+        setTimeout(() => wrapper.remove(), 600);
+      }, 45000);
+    }
   };
 }
