@@ -60,3 +60,4 @@ export function renderBlazeMessage(msg) {
     }
   };
 }
+
