@@ -1,55 +1,44 @@
 // platforms/velora.js
 
-import { sanitizeHTML } from "../utils/sanitizeHTML.js";
 import { colorForUsername } from "../utils/usernameColors.js";
-import { renderVeloraBadges } from "../badges/veloraBadges.js";
+import { sanitizeHTML } from "../utils/sanitizeHTML.js";
 
 export function renderVeloraMessage(msg) {
   const wrapper = document.createElement("div");
   wrapper.className = "msg velora-msg";
 
-  const icon = document.createElement("img");
-  icon.className = "platform-icon";
-  icon.src = `/icons/velora.png`;
-  wrapper.appendChild(icon);
+  // Platform icon (big)
+  const bigAvatar = document.createElement("img");
+  bigAvatar.className = "avatar";
+  bigAvatar.src = "/icons/velora.png";
+  wrapper.appendChild(bigAvatar);
 
   const bubble = document.createElement("div");
   bubble.className = "bubble";
 
-  const content = document.createElement("div");
-  content.className = "content";
+  // Header row
+  const header = document.createElement("div");
+  header.className = "header";
 
-  if (msg.badges?.length) {
-    content.insertAdjacentHTML("beforeend", renderVeloraBadges(msg.badges));
-  }
+  const smallAvatar = document.createElement("img");
+  smallAvatar.className = "avatar-small";
+  smallAvatar.src = msg.avatar || "/icons/velora.png";
+  header.appendChild(smallAvatar);
 
-  const name = document.createElement("div");
+  const name = document.createElement("span");
   name.className = "username";
   name.textContent = msg.username;
   name.style.color = colorForUsername(msg.username, "velora");
-  content.appendChild(name);
+  header.appendChild(name);
 
+  bubble.appendChild(header);
+
+  // Text row
   const text = document.createElement("div");
+  text.className = "text";
   text.innerHTML = sanitizeHTML(msg.html);
 
-  text.querySelectorAll("img").forEach(img => {
-    const isSmall =
-      (img.naturalWidth && img.naturalWidth <= 40) ||
-      (img.width && img.width <= 40);
-
-    if (isSmall) img.classList.add("scaled-emote");
-  });
-
-  text.querySelectorAll("video").forEach(v => {
-    v.muted = true;
-    v.autoplay = true;
-    v.loop = true;
-    v.playsInline = true;
-    v.play().catch(() => {});
-  });
-
-  content.appendChild(text);
-  bubble.appendChild(content);
+  bubble.appendChild(text);
   wrapper.appendChild(bubble);
 
   return {
