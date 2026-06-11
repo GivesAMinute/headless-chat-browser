@@ -6,7 +6,7 @@ import { renderUniversalBadges } from "../badges/universalBadges.js";
 
 export function renderTwitchMessage(msg) {
   const wrapper = document.createElement("div");
-  wrapper.className = "msg";
+  wrapper.className = "msg twitch-msg";
 
   const icon = document.createElement("img");
   icon.className = "platform-icon";
@@ -36,7 +36,6 @@ export function renderTwitchMessage(msg) {
     const isSmall =
       (img.naturalWidth && img.naturalWidth <= 40) ||
       (img.width && img.width <= 40);
-
     if (isSmall) img.classList.add("scaled-emote");
   });
 
@@ -46,6 +45,11 @@ export function renderTwitchMessage(msg) {
 
   return {
     element: wrapper,
-    cleanup: () => {}
+    cleanup() {
+      setTimeout(() => {
+        bubble.classList.add("fadeOut");
+        setTimeout(() => wrapper.remove(), 600);
+      }, 45000);
+    }
   };
 }

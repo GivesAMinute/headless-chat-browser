@@ -1,8 +1,12 @@
 // platforms/rumble.js
 
-export function renderRumble(msg) {
+import { sanitizeHTML } from "../utils/sanitizeHTML.js";
+import { colorForUsername } from "../utils/usernameColors.js";
+import { renderUniversalBadges } from "../badges/universalBadges.js";
+
+export function renderRumbleMessage(msg) {
   const wrapper = document.createElement("div");
-  wrapper.className = "msg";
+  wrapper.className = "msg rumble-msg";
 
   const icon = document.createElement("img");
   icon.className = "platform-icon";
@@ -11,12 +15,49 @@ export function renderRumble(msg) {
 
   const bubble = document.createElement("div");
   bubble.className = "bubble";
-  bubble.textContent = `[Rumble renderer not implemented yet]`;
 
+  const content = document.createElement("div");
+  content.className = "content";
+
+  if (msg.badges?.length) {
+    content.insertAdjacentHTML("beforeend", renderUniversalBadges(msg.badges));
+  }
+
+  const name = document.createElement("div");
+  name.className = "username";
+  name.textContent = msg.username;
+  name.style.color = colorForUsername(msg.username, "rumble");
+  content.appendChild(name);
+
+  const text = document.createElement("div");
+  text.innerHTML = sanitizeHTML(msg.html);
+
+  text.querySelectorAll("img").forEach(img => {
+    const isSmall =
+      (img.naturalWidth && img.naturalWidth <= 40) ||
+      (img.width && img.width <= 40);
+    if (isSmall) img.classList.add("scaled-emote");
+  });
+
+  text.querySelectorAll("video").forEach(v => {
+    v.muted = true;
+    v.autoplay = true;
+    v.loop = true;
+    v.playsInline = true;
+    v.play().catch(() => {});
+  });
+
+  content.appendChild(text);
+  bubble.appendChild(content);
   wrapper.appendChild(bubble);
 
   return {
     element: wrapper,
-    cleanup: () => {}
+    cleanup() {
+      setTimeout(() => {
+        bubble.classList.add("fadeOut");
+        setTimeout(() => wrapper.remove(), 600);
+      }, 45000);
+    }
   };
 }

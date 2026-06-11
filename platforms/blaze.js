@@ -2,7 +2,6 @@
 
 import { sanitizeHTML } from "../utils/sanitizeHTML.js";
 import { colorForUsername } from "../utils/usernameColors.js";
-
 import {
   MOD_BADGE,
   OG_BADGE,
@@ -12,9 +11,8 @@ import {
 
 export function renderBlazeMessage(msg) {
   const wrapper = document.createElement("div");
-  wrapper.className = "msg";
+  wrapper.className = "msg blaze-msg";
 
-  // Platform icon
   const icon = document.createElement("img");
   icon.className = "platform-icon";
   icon.src = `/icons/blaze.png`;
@@ -26,33 +24,27 @@ export function renderBlazeMessage(msg) {
   const content = document.createElement("div");
   content.className = "content";
 
-  // Blaze role badges
   if (msg.isMod)      content.insertAdjacentHTML("beforeend", MOD_BADGE);
   if (msg.isOG)       content.insertAdjacentHTML("beforeend", OG_BADGE);
   if (msg.isVIP)      content.insertAdjacentHTML("beforeend", VIP_BADGE);
   if (msg.isStreamer) content.insertAdjacentHTML("beforeend", STREAMER_BADGE);
 
-  // Username
   const name = document.createElement("div");
   name.className = "username";
   name.textContent = msg.username;
   name.style.color = colorForUsername(msg.username, "blaze");
   content.appendChild(name);
 
-  // Message HTML
   const text = document.createElement("div");
   text.innerHTML = sanitizeHTML(msg.html);
 
-  // Emote scaling
   text.querySelectorAll("img").forEach(img => {
     const isSmall =
       (img.naturalWidth && img.naturalWidth <= 40) ||
       (img.width && img.width <= 40);
-
     if (isSmall) img.classList.add("scaled-emote");
   });
 
-  // Video autoplay
   text.querySelectorAll("video").forEach(v => {
     v.muted = true;
     v.autoplay = true;
@@ -67,6 +59,11 @@ export function renderBlazeMessage(msg) {
 
   return {
     element: wrapper,
-    cleanup: () => {}
+    cleanup() {
+      setTimeout(() => {
+        bubble.classList.add("fadeOut");
+        setTimeout(() => wrapper.remove(), 600);
+      }, 45000);
+    }
   };
 }
