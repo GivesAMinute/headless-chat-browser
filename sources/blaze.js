@@ -56,7 +56,6 @@ function transformBlazeMessage(msg) {
     avatar: sender.avatarUrl || null,
     html: extractMessage(msg),
 
-    // ⭐ Blaze role flags
     isStreamer: String(sender.id) === String(CHANNEL_OWNER_ID),
     isMod: roles.includes("moderator"),
     isOG: roles.includes("og"),
@@ -222,7 +221,7 @@ function startBlazeEventSub(broadcast) {
   });
 }
 
-export function startBlaze(broadcast) {
+export function startBlazeScraper({ broadcast }) {
   const channelId = process.env.BLAZE_CHANNEL_ID;
   const clientId = process.env.BLAZE_CLIENT_ID;
   const accessToken = process.env.BLAZE_ACCESS_TOKEN;

@@ -1,9 +1,8 @@
 FROM node:20-slim
 
-# Install Chromium dependencies
+# Install Chromium + ALL required dependencies
 RUN apt-get update && apt-get install -y \
     chromium \
-    chromium-driver \
     fonts-liberation \
     libasound2 \
     libatk-bridge2.0-0 \
@@ -15,11 +14,20 @@ RUN apt-get update && apt-get install -y \
     libgtk-3-0 \
     libnspr4 \
     libnss3 \
+    libx11-6 \
+    libx11-xcb1 \
     libxcomposite1 \
     libxdamage1 \
+    libxext6 \
     libxfixes3 \
+    libxkbcommon0 \
     libxrandr2 \
+    libxrender1 \
     libxshmfence1 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libxss1 \
+    libseccomp2 \
     wget \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
@@ -27,7 +35,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+RUN npm install --omit=dev
 
 COPY . .
 
