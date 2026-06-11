@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chat Overlay</title>
 
-  <!-- Load external CSS (must be in same folder as this file) -->
+  <!-- CSS is in the same folder -->
   <link rel="stylesheet" href="overlay.css" />
 </head>
 
@@ -17,8 +17,8 @@
 
     const messagesContainer = document.getElementById("messages");
 
-    // IMPORTANT: Replace with your actual WebSocket URL
-    const ws = new WebSocket("wss://headless-chat-browser-production.up.railway.app/ws");
+    // ⭐ Correct WebSocket URL — same as your old working version
+    const ws = new WebSocket("wss://headless-chat-browser-production.up.railway.app");
 
     ws.addEventListener("message", event => {
       let msg;
@@ -30,12 +30,9 @@
       }
 
       const { element, cleanup } = renderMessage(msg);
-
       messagesContainer.appendChild(element);
 
-      if (typeof cleanup === "function") {
-        cleanup();
-      }
+      if (typeof cleanup === "function") cleanup();
     });
   </script>
 </body>
