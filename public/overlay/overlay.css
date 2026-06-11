@@ -29,11 +29,17 @@ body {
 
 /* Platform icon */
 .platform-icon {
-  width: 60px;
-  height: 60px;
+  width: 55px;
+  height: 55px;
   border-radius: 10px; /* optional: scales nicer at larger size */
   flex-shrink: 0;
 }
+
+.beam-msg .avatar {
+  width: 55px;
+  height: 55px;
+}
+
 
 /* Avatar */
 .avatar {
