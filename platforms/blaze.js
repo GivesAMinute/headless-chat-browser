@@ -10,7 +10,7 @@ import {
   STREAMER_BADGE
 } from "../badges/blazeBadges.js";
 
-export function renderBlaze(msg) {
+export function renderBlazeMessage(msg) {
   const wrapper = document.createElement("div");
   wrapper.className = "msg";
 
