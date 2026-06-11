@@ -7,13 +7,11 @@ export function renderBeamMessage(msg) {
   const wrapper = document.createElement("div");
   wrapper.className = "msg beam-msg";
 
-  // Avatar (Beam uses avatar instead of platform icon)
-  if (msg.avatar) {
-    const img = document.createElement("img");
-    img.className = "avatar";
-    img.src = msg.avatar;
-    wrapper.appendChild(img);
-  }
+  // ⭐ Beam now uses platform icon instead of user avatar
+  const img = document.createElement("img");
+  img.className = "avatar";
+  img.src = "/icons/beam.png";   // <-- your custom icon
+  wrapper.appendChild(img);
 
   const bubble = document.createElement("div");
   bubble.className = "bubble";
