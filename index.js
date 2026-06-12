@@ -5,10 +5,8 @@ import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Correct imports
-import { startYouTubeScraper } from "./sources/youtube.js";
-import { startBlazeScraper } from "./sources/blaze.js";
-import { startVeloraChat } from "./sources/velora.js";
+import { startYouTube } from "./sources/youtube.js";
+import { startBlaze } from "./sources/blaze.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,7 +14,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 8080;
 
-// Correct static paths
+// Static assets (UPDATED for current structure)
 app.use("/icons", express.static(path.join(__dirname, "public/icons")));
 app.use("/badges", express.static(path.join(__dirname, "badges")));
 app.use("/utils", express.static(path.join(__dirname, "utils")));
@@ -27,7 +25,6 @@ let beamPage;
 
 const wss = new WebSocketServer({ noServer: true });
 
-// ⭐ CLEAN BROADCAST — NO LOGGING
 function broadcast(msg) {
   for (const client of wss.clients) {
     if (client.readyState === 1) {
@@ -40,7 +37,7 @@ function broadcast(msg) {
    BEAM CHAT SCRAPER
 --------------------------------------------------------- */
 async function startBeamChat() {
-  console.log("Starting Beam scraper…");
+  console.log("Launching headless browser…");
 
   browser = await puppeteer.launch({
     headless: true,
@@ -56,6 +53,10 @@ async function startBeamChat() {
 
   beamPage = await browser.newPage();
 
+  beamPage.on("console", (msg) => console.log("BEAM LOG:", msg.text()));
+
+  console.log("Injecting Beam login session…");
+
   await beamPage.goto("https://beamstream.gg", { waitUntil: "domcontentloaded" });
 
   const storage = JSON.parse(process.env.BEAM_LOCALSTORAGE);
@@ -66,11 +67,15 @@ async function startBeamChat() {
     }
   }, storage);
 
+  console.log("Beam session injected. Loading chat…");
+
   await beamPage.goto("https://beamstream.gg/givesaminute/chat", {
     waitUntil: "networkidle2"
   });
 
   await new Promise((resolve) => setTimeout(resolve, 5000));
+
+  console.log("Injecting Beam message observer…");
 
   await beamPage.exposeFunction("relayMessage", (msg) => {
     broadcast(msg);
@@ -131,7 +136,7 @@ async function startBeamChat() {
    TWITCH CHAT SCRAPER
 --------------------------------------------------------- */
 async function startTwitchChat() {
-  console.log("Starting Twitch scraper…");
+  console.log("Starting Twitch chat scraper…");
 
   const twitchPage = await browser.newPage();
 
@@ -160,6 +165,7 @@ async function startTwitchChat() {
     };
 
     const timer = setTimeout(() => {
+      console.log("TWITCH → FINAL MESSAGE SENT:", payload);
       broadcast(payload);
       pendingByUser.delete(key);
     }, 500);
@@ -234,18 +240,75 @@ async function startTwitchChat() {
 }
 
 /* ---------------------------------------------------------
+   VELORA CHAT SCRAPER
+--------------------------------------------------------- */
+async function startVeloraChat() {
+  console.log("Starting Velora chat scraper…");
+
+  const veloraPage = await browser.newPage();
+
+  await veloraPage.goto(
+    "https://velora.tv/dashboard/stream/popout?panels=chat%2Cactivity&channel=GivesAMinute&layout=vertical",
+    { waitUntil: "networkidle2" }
+  );
+
+  await veloraPage.exposeFunction("relayVelora", (msg) => {
+    broadcast(msg);
+  });
+
+  await veloraPage.evaluate(() => {
+    const observer = new MutationObserver(() => {
+      const nodes = [...document.querySelectorAll(".chat-message-content")];
+      const last = nodes[nodes.length - 1];
+      if (!last) return;
+
+      const wrapperSpan = last.querySelector("span.inline.leading-relaxed.text-sm");
+      if (!wrapperSpan) return;
+
+      const button = wrapperSpan.querySelector("button");
+      const username = (button?.innerText || "").replace(":", "").trim();
+      if (!username) return;
+
+      const messageSpan =
+        wrapperSpan.querySelector("span.break-words") ||
+        wrapperSpan.querySelector("span.text-white\\/90.break-words") ||
+        wrapperSpan.querySelector("span.text-white\\/90");
+
+      const html = messageSpan?.innerHTML || "";
+
+      const badges = [
+        ...wrapperSpan.querySelectorAll('img[src*="velora-badges"]'),
+        ...wrapperSpan.querySelectorAll('img[src*="assets.velora.tv/badges"]')
+      ].map(img => img.src);
+
+      window.relayVelora({
+        platform: "velora",
+        username,
+        html,
+        avatar: null,
+        badges
+      });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
+
+  console.log("Velora chat observer active.");
+}
+
+/* ---------------------------------------------------------
    EXPRESS + SERVER
 --------------------------------------------------------- */
 
-// Correct overlay path
+// UPDATED: serve new overlay location
 app.get("/overlay", (_req, res) => {
   res.sendFile(path.join(__dirname, "public/overlay/index.html"));
 });
 
-// Keep-alive
 setInterval(() => {
   if (!process.env.RAILWAY_STATIC_URL) return;
   fetch("https://" + process.env.RAILWAY_STATIC_URL)
+    .then(() => console.log("Keep-alive ping sent"))
     .catch(() => {});
 }, 1000 * 60 * 4);
 
@@ -256,13 +319,14 @@ const server = app.listen(port, () => {
     .then(() => {
       return Promise.all([
         startTwitchChat(),
-        startVeloraChat(browser, broadcast)
+        startVeloraChat()
       ]);
     })
     .catch((err) => console.error("Startup error:", err));
 
-  startYouTubeScraper({ broadcast });
-  startBlazeScraper({ broadcast });
+  // These were already split out and working
+  startYouTube(broadcast);
+  startBlaze(broadcast);
 });
 
 server.on("upgrade", (req, socket, head) => {
