@@ -14,43 +14,17 @@
       white-space: pre-wrap;
       font-size: 14px;
     }
-    .msg {
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid #333;
-    }
-    .platform {
-      color: #4af;
-      font-weight: bold;
-    }
   </style>
 </head>
 
 <body>
-  <div id="log"></div>
+  <!-- Debug overlay now silent -->
 
   <script>
-    const log = document.getElementById("log");
-
     const ws = new WebSocket(location.href.replace("http", "ws"));
 
     ws.addEventListener("message", event => {
-      let msg;
-      try {
-        msg = JSON.parse(event.data);
-      } catch (err) {
-        console.error("Invalid JSON:", err);
-        return;
-      }
-
-      const div = document.createElement("div");
-      div.className = "msg";
-
-      div.innerHTML =
-        "<div class='platform'>Platform: " + msg.platform + "</div>" +
-        JSON.stringify(msg, null, 2);
-
-      log.prepend(div);
+      // Debug output removed — overlay is now silent
     });
   </script>
 </body>
