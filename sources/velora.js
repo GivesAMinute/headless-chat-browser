@@ -1,7 +1,6 @@
-/* ---------------------------------------------------------
-   VELORA CHAT SCRAPER (CLEAN + FIXED)
---------------------------------------------------------- */
-async function startVeloraChat() {
+// sources/velora.js
+
+export async function startVeloraChat(browser, broadcast) {
   console.log("Starting Velora chat scraper…");
 
   const veloraPage = await browser.newPage();
@@ -21,16 +20,13 @@ async function startVeloraChat() {
       const last = nodes[nodes.length - 1];
       if (!last) return;
 
-      // Wrapper span containing username + badges + message
       const wrapperSpan = last.querySelector("span.inline.leading-relaxed.text-sm");
       if (!wrapperSpan) return;
 
-      // Username
       const button = wrapperSpan.querySelector("button");
       const username = (button?.innerText || "").replace(":", "").trim();
       if (!username) return;
 
-      // Message HTML
       const messageSpan =
         wrapperSpan.querySelector("span.break-words") ||
         wrapperSpan.querySelector("span.text-white\\/90.break-words") ||
@@ -38,13 +34,12 @@ async function startVeloraChat() {
 
       const html = messageSpan?.innerHTML || "";
 
-      // ⭐ BADGE FIX: Filter out internal Velora base assets
       const badges = [
         ...wrapperSpan.querySelectorAll('img[src*="velora-badges"]'),
         ...wrapperSpan.querySelectorAll('img[src*="assets.velora.tv/badges"]')
       ]
         .map(img => img.src)
-        .filter(src => !src.includes("/base/"));   // ⬅️ REMOVE INTERNAL BADGES
+        .filter(src => !src.includes("/base/")); // remove internal badges
 
       window.relayVelora({
         platform: "velora",
