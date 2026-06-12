@@ -5,7 +5,7 @@ import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// ⭐ Correct imports matching your actual files
+// Correct imports
 import { startYouTubeScraper } from "./sources/youtube.js";
 import { startBlazeScraper } from "./sources/blaze.js";
 import { startVeloraChat } from "./sources/velora.js";
@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 8080;
 
-// ⭐ Correct static paths
+// Correct static paths
 app.use("/icons", express.static(path.join(__dirname, "public/icons")));
 app.use("/badges", express.static(path.join(__dirname, "badges")));
 app.use("/utils", express.static(path.join(__dirname, "utils")));
@@ -27,6 +27,7 @@ let beamPage;
 
 const wss = new WebSocketServer({ noServer: true });
 
+// ⭐ CLEAN BROADCAST — NO LOGGING
 function broadcast(msg) {
   for (const client of wss.clients) {
     if (client.readyState === 1) {
@@ -39,7 +40,7 @@ function broadcast(msg) {
    BEAM CHAT SCRAPER
 --------------------------------------------------------- */
 async function startBeamChat() {
-  console.log("Launching headless browser…");
+  console.log("Starting Beam scraper…");
 
   browser = await puppeteer.launch({
     headless: true,
@@ -55,10 +56,6 @@ async function startBeamChat() {
 
   beamPage = await browser.newPage();
 
-  beamPage.on("console", (msg) => console.log("BEAM LOG:", msg.text()));
-
-  console.log("Injecting Beam login session…");
-
   await beamPage.goto("https://beamstream.gg", { waitUntil: "domcontentloaded" });
 
   const storage = JSON.parse(process.env.BEAM_LOCALSTORAGE);
@@ -69,15 +66,11 @@ async function startBeamChat() {
     }
   }, storage);
 
-  console.log("Beam session injected. Loading chat…");
-
   await beamPage.goto("https://beamstream.gg/givesaminute/chat", {
     waitUntil: "networkidle2"
   });
 
   await new Promise((resolve) => setTimeout(resolve, 5000));
-
-  console.log("Injecting Beam message observer…");
 
   await beamPage.exposeFunction("relayMessage", (msg) => {
     broadcast(msg);
@@ -138,7 +131,7 @@ async function startBeamChat() {
    TWITCH CHAT SCRAPER
 --------------------------------------------------------- */
 async function startTwitchChat() {
-  console.log("Starting Twitch chat scraper…");
+  console.log("Starting Twitch scraper…");
 
   const twitchPage = await browser.newPage();
 
@@ -167,7 +160,6 @@ async function startTwitchChat() {
     };
 
     const timer = setTimeout(() => {
-      console.log("TWITCH → FINAL MESSAGE SENT:", payload);
       broadcast(payload);
       pendingByUser.delete(key);
     }, 500);
@@ -245,7 +237,7 @@ async function startTwitchChat() {
    EXPRESS + SERVER
 --------------------------------------------------------- */
 
-// ⭐ Correct overlay path
+// Correct overlay path
 app.get("/overlay", (_req, res) => {
   res.sendFile(path.join(__dirname, "public/overlay/index.html"));
 });
@@ -254,7 +246,6 @@ app.get("/overlay", (_req, res) => {
 setInterval(() => {
   if (!process.env.RAILWAY_STATIC_URL) return;
   fetch("https://" + process.env.RAILWAY_STATIC_URL)
-    .then(() => console.log("Keep-alive ping sent"))
     .catch(() => {});
 }, 1000 * 60 * 4);
 
@@ -270,7 +261,6 @@ const server = app.listen(port, () => {
     })
     .catch((err) => console.error("Startup error:", err));
 
-  // ⭐ Correct calls
   startYouTubeScraper({ broadcast });
   startBlazeScraper({ broadcast });
 });
