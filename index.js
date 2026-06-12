@@ -16,11 +16,11 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 8080;
 
-// Static assets
+// ⭐ Correct static paths
 app.use("/icons", express.static(path.join(__dirname, "public/icons")));
 app.use("/badges", express.static(path.join(__dirname, "badges")));
 app.use("/utils", express.static(path.join(__dirname, "utils")));
-app.use("/overlay", express.static(path.join(__dirname, "overlay")));
+app.use("/overlay", express.static(path.join(__dirname, "public/overlay")));
 
 let browser;
 let beamPage;
@@ -244,10 +244,13 @@ async function startTwitchChat() {
 /* ---------------------------------------------------------
    EXPRESS + SERVER
 --------------------------------------------------------- */
+
+// ⭐ Correct overlay path
 app.get("/overlay", (_req, res) => {
-  res.sendFile(path.join(__dirname, "overlay/index.html"));
+  res.sendFile(path.join(__dirname, "public/overlay/index.html"));
 });
 
+// Keep-alive
 setInterval(() => {
   if (!process.env.RAILWAY_STATIC_URL) return;
   fetch("https://" + process.env.RAILWAY_STATIC_URL)
