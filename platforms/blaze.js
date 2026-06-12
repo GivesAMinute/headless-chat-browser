@@ -7,7 +7,7 @@ export function renderBlazeMessage(msg) {
   const wrapper = document.createElement("div");
   wrapper.className = "msg blaze-msg";
 
-  // Platform icon (big)
+  // Big platform icon
   const bigAvatar = document.createElement("img");
   bigAvatar.className = "avatar";
   bigAvatar.src = "/icons/blaze.png";
@@ -20,34 +20,37 @@ export function renderBlazeMessage(msg) {
   const header = document.createElement("div");
   header.className = "header";
 
+  // Small avatar
   const smallAvatar = document.createElement("img");
   smallAvatar.className = "avatar-small";
-  smallAvatar.src = msg.avatar || "/icons/blaze.png";
+  smallAvatar.src = msg.avatar || "/icons/user-default.png";
   header.appendChild(smallAvatar);
 
+  // Username (Blaze uses sender.displayName)
   const name = document.createElement("span");
   name.className = "username";
-  name.textContent = msg.username;
-  name.style.color = colorForUsername(msg.username, "blaze");
+  name.textContent = msg.username || msg.displayName || msg.sender || "Unknown";
+  name.style.color = colorForUsername(name.textContent, "blaze");
   header.appendChild(name);
 
-  // Blaze badges (OG, VIP, Mod, Streamer)
+  // Badges (Blaze scraper sends array of strings)
   if (msg.badges?.length) {
-    msg.badges.forEach(b => {
-      const span = document.createElement("span");
-      span.innerHTML = b.html;
-      header.appendChild(span);
+    msg.badges.forEach(src => {
+      const img = document.createElement("img");
+      img.src = src;
+      img.className = "badge";
+      header.appendChild(img);
     });
   }
 
   bubble.appendChild(header);
 
-  // Text row
+  // Message body
   const text = document.createElement("div");
   text.className = "text";
-  text.innerHTML = sanitizeHTML(msg.html);
-
+  text.innerHTML = sanitizeHTML(msg.html || msg.message || "");
   bubble.appendChild(text);
+
   wrapper.appendChild(bubble);
 
   return {
@@ -60,4 +63,3 @@ export function renderBlazeMessage(msg) {
     }
   };
 }
-
