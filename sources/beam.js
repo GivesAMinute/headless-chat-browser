@@ -1,81 +1,76 @@
 // sources/beam.js
-import puppeteer from "puppeteer";
 
-export async function startBeam(broadcast) {
+export async function startBeam(browser, broadcast) {
   console.log("Starting Beam scraper…");
-
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-      "--disable-software-rasterizer",
-      "--autoplay-policy=no-user-gesture-required"
-    ]
-  });
 
   const page = await browser.newPage();
 
-  await page.goto("https://beamstream.gg", { waitUntil: "domcontentloaded" });
+  await page.goto(
+    "https://beamstream.gg/givesaminute/chat",
+    { waitUntil: "networkidle2" }
+  );
 
-  const storage = JSON.parse(process.env.BEAM_LOCALSTORAGE);
-
-  await page.evaluate((storage) => {
-    for (const [key, value] of Object.entries(storage)) {
-      localStorage.setItem(key, value);
-    }
-  }, storage);
-
-  await page.goto("https://beamstream.gg/givesaminute/chat", {
-    waitUntil: "networkidle2"
-  });
-
-  await new Promise((resolve) => setTimeout(resolve, 5000));
-
-  await page.exposeFunction("relayMessage", (msg) => {
+  await page.exposeFunction("relayBeam", (msg) => {
     broadcast(msg);
   });
 
   await page.evaluate(() => {
-    const selector =
-      'div[typeof="ChatMessage"], div[typeof="ChatMessageExternal"]';
-
     const observer = new MutationObserver(() => {
-      const messages = [...document.querySelectorAll(selector)];
-      const last = messages[messages.length - 1];
+      const nodes = [...document.querySelectorAll(".chat-message")];
+      const last = nodes[nodes.length - 1];
       if (!last) return;
 
-      let platform =
-        last.querySelector('[property="service"]')?.getAttribute("value") ||
-        "beam";
-
-      if (platform === "twitch" || platform === "velora") return;
-
+      /* USERNAME */
       const username =
-        last.querySelector('[property="sender.name"]')?.innerText?.trim() || "";
+        last.querySelector(".username")?.innerText?.trim() ||
+        last.querySelector(".user-name")?.innerText?.trim() ||
+        "Unknown";
 
-      let html =
-        last.querySelector('[property="body"]')?.innerHTML || "";
-
+      /* AVATAR */
       const avatar =
-        last.querySelector('[property="avatar"]')?.src || null;
+        last.querySelector(".avatar img")?.src ||
+        last.querySelector("img.avatar")?.src ||
+        null;
 
-      const badges = [
-        ...last.querySelectorAll('[property="badge"]'),
-        ...last.querySelectorAll('img[class*="badge"]'),
-        ...last.querySelectorAll('img[data-badge]')
-      ].map(b => b.src);
+      /* BADGES */
+      const badges = [...last.querySelectorAll(".badge img")].map(img => img.src);
 
-      let stickerHTML = "";
-      const sticker = last.querySelector("video");
-      if (sticker) {
-        stickerHTML = sticker.outerHTML;
+      /* MESSAGE HTML */
+      const container =
+        last.querySelector(".message") ||
+        last.querySelector(".msg-body") ||
+        last;
+
+      let html = "";
+      if (container) {
+        const parts = [
+          ...container.querySelectorAll(".text-fragment, .chat-image, img, video")
+        ];
+
+        html = parts
+          .map(el => {
+            if (el.tagName === "IMG") {
+              const alt = (el.getAttribute("alt") || "").trim();
+              if (!alt) return "";
+              return el.outerHTML;
+            }
+
+            if (el.tagName === "VIDEO") {
+              return el.outerHTML;
+            }
+
+            return el.outerHTML || el.textContent || "";
+          })
+          .join("");
       }
 
-      window.relayMessage({
-        platform,
+      /* STICKERS (Beam uses <img class="sticker"> or <video>) */
+      const sticker = last.querySelector("img.sticker, video.sticker");
+      const stickerHTML = sticker ? sticker.outerHTML : "";
+
+      /* SEND NORMALIZED MESSAGE */
+      window.relayBeam({
+        platform: "beam",   // ⭐ NORMALIZED — required for V3.2
         username,
         html: html + stickerHTML,
         avatar,

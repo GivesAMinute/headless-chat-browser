@@ -48,7 +48,7 @@
     vpzone: "vpzone",
 
     twitch: "twitch",
-    beam: null
+    beam: "beam"
   };
 
   function getPlatformIcon(platform) {
@@ -138,22 +138,15 @@
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
 
-    /* PLATFORM ICON WITH TOOLTIP */
-    if (msg.platform === "beam" && msg.avatar) {
-      const img = document.createElement("img");
-      img.className = "avatar";
-      img.src = msg.avatar;
-      wrapper.appendChild(img);
-    } else {
-      const iconPath = getPlatformIcon(msg.platform);
-      if (iconPath) {
-        const iconHTML = `
-          <span class="tooltip-wrapper">
-            <img class="platform-icon" src="${iconPath}">
-            <span class="tooltip-bubble">${msg.platform.toUpperCase()}</span>
-          </span>`;
-        wrapper.insertAdjacentHTML("beforeend", iconHTML);
-      }
+    /* PLATFORM ICON (Beam now included normally) */
+    const iconPath = getPlatformIcon(msg.platform);
+    if (iconPath) {
+      const iconHTML = `
+        <span class="tooltip-wrapper">
+          <img class="platform-icon" src="${iconPath}">
+          <span class="tooltip-bubble">${msg.platform.toUpperCase()}</span>
+        </span>`;
+      wrapper.insertAdjacentHTML("beforeend", iconHTML);
     }
 
     const bubble = document.createElement("div");
@@ -162,7 +155,7 @@
     const content = document.createElement("div");
     content.className = "content";
 
-    /* Velora badges WITH TOOLTIP */
+    /* Velora badges */
     if (msg.platform === "velora" && msg.badges?.length) {
       msg.badges.forEach(src => {
         const label = src.split("/").pop().replace(/\.(png|svg)/, "");
