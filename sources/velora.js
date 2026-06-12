@@ -10,6 +10,7 @@ export async function startVeloraChat(browser, broadcast) {
     { waitUntil: "networkidle2" }
   );
 
+  // Bridge messages back to Node
   await veloraPage.exposeFunction("relayVelora", (msg) => {
     broadcast(msg);
   });
@@ -20,13 +21,16 @@ export async function startVeloraChat(browser, broadcast) {
       const last = nodes[nodes.length - 1];
       if (!last) return;
 
+      // Username wrapper
       const wrapperSpan = last.querySelector("span.inline.leading-relaxed.text-sm");
       if (!wrapperSpan) return;
 
+      // Username
       const button = wrapperSpan.querySelector("button");
       const username = (button?.innerText || "").replace(":", "").trim();
       if (!username) return;
 
+      // Message HTML
       const messageSpan =
         wrapperSpan.querySelector("span.break-words") ||
         wrapperSpan.querySelector("span.text-white\\/90.break-words") ||
@@ -34,13 +38,15 @@ export async function startVeloraChat(browser, broadcast) {
 
       const html = messageSpan?.innerHTML || "";
 
+      // ⭐ BADGE FIX — remove internal Velora base assets
       const badges = [
         ...wrapperSpan.querySelectorAll('img[src*="velora-badges"]'),
         ...wrapperSpan.querySelectorAll('img[src*="assets.velora.tv/badges"]')
       ]
         .map(img => img.src)
-        .filter(src => !src.includes("/base/")); // remove internal badges
+        .filter(src => !src.includes("/base/"));   // ⬅️ remove internal UUID badges
 
+      // Send normalized Velora message
       window.relayVelora({
         platform: "velora",
         username,

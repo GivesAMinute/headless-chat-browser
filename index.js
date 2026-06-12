@@ -6,8 +6,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import { startYouTube } from "./sources/youtube.js";
-import { startBlaze } from "./sources/blaze.js";
-import { startVeloraChat } from "./sources/velora.js";   // ⭐ FIXED
+import { startBlazeScraper } from "./sources/blaze.js";   // ⭐ FIXED
+import { startVeloraChat } from "./sources/velora.js";     // ⭐ CORRECT
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -244,7 +244,7 @@ async function startTwitchChat() {
    EXPRESS + SERVER
 --------------------------------------------------------- */
 app.get("/overlay", (_req, res) => {
-  res.sendFile(path.join(__dirname, "overlay/index.html"));  // ⭐ FIXED PATH
+  res.sendFile(path.join(__dirname, "overlay/index.html"));
 });
 
 setInterval(() => {
@@ -261,13 +261,13 @@ const server = app.listen(port, () => {
     .then(() => {
       return Promise.all([
         startTwitchChat(),
-        startVeloraChat(browser, broadcast)   // ⭐ FIXED CALL
+        startVeloraChat(browser, broadcast)
       ]);
     })
     .catch((err) => console.error("Startup error:", err));
 
   startYouTube(broadcast);
-  startBlaze(broadcast);
+  startBlazeScraper({ broadcast });   // ⭐ FIXED
 });
 
 server.on("upgrade", (req, socket, head) => {
