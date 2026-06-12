@@ -7,22 +7,22 @@ export function renderBeamMessage(msg) {
   const wrapper = document.createElement("div");
   wrapper.className = "msg beam-msg";
 
-  // ⭐ Big avatar = platform icon (Beam logo)
-  const bigAvatar = document.createElement("img");
-  bigAvatar.className = "avatar";
-  bigAvatar.src = "/icons/beam.png";   // <-- platform icon restored
-  wrapper.appendChild(bigAvatar);
+  // ⭐ Big platform icon (same class + size as all other platforms)
+  const bigIcon = document.createElement("img");
+  bigIcon.className = "platform-icon";
+  bigIcon.src = "/icons/beam.png";
+  wrapper.appendChild(bigIcon);
 
   const bubble = document.createElement("div");
   bubble.className = "bubble";
 
-  // ⭐ Header row: small avatar + username
+  // ⭐ Header row: small user avatar + username
   const header = document.createElement("div");
   header.className = "header";
 
   const smallAvatar = document.createElement("img");
   smallAvatar.className = "avatar-small";
-  smallAvatar.src = msg.avatar || "/icons/beam.png"; // <-- user avatar here
+  smallAvatar.src = msg.avatar || "/icons/user-default.png";
   header.appendChild(smallAvatar);
 
   const name = document.createElement("span");
@@ -38,15 +38,12 @@ export function renderBeamMessage(msg) {
   text.className = "text";
   text.innerHTML = sanitizeHTML(msg.html);
 
-  // Emote scaling (Beam style)
+  // Emote scaling
   text.querySelectorAll("img").forEach(img => {
     const isSmall =
       (img.naturalWidth && img.naturalWidth <= 40) ||
       (img.width && img.width <= 40);
-
-    if (isSmall) {
-      img.classList.add("scaled-emote");
-    }
+    if (isSmall) img.classList.add("scaled-emote");
   });
 
   // Stickers (videos)
