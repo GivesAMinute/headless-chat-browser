@@ -3,28 +3,40 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DEBUG OVERLAY</title>
+  <title>Chat Overlay</title>
 
-  <style>
-    body {
-      background: #000;
-      color: #0f0;
-      font-family: monospace;
-      padding: 20px;
-      white-space: pre-wrap;
-      font-size: 14px;
-    }
-  </style>
+  <link rel="stylesheet" href="/overlay/overlay.css" />
 </head>
 
 <body>
-  <!-- Debug overlay now silent -->
+  <div id="chat-container"></div>
 
-  <script>
+  <script type="module">
+    import { renderMessage } from "./router.js";
+
+    const container = document.getElementById("chat-container");
+
     const ws = new WebSocket(location.href.replace("http", "ws"));
 
     ws.addEventListener("message", event => {
-      // Debug output removed — overlay is now silent
+      let msg;
+      try {
+        msg = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+
+      // Render the message using your router + platform renderers
+      const el = renderMessage(msg);
+
+      if (!el) return;
+
+      container.appendChild(el);
+
+      // Auto‑trim old messages
+      while (container.children.length > 50) {
+        container.removeChild(container.firstChild);
+      }
     });
   </script>
 </body>
