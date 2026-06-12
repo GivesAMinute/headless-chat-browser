@@ -3,32 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chat Overlay</title>
+  <title>DEBUG OVERLAY</title>
 
-  <link rel="stylesheet" href="overlay.css" />
+  <style>
+    body {
+      background: #000;
+      color: #0f0;
+      font-family: monospace;
+      padding: 20px;
+      white-space: pre-wrap;
+      font-size: 14px;
+    }
+    .msg {
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #333;
+    }
+    .platform {
+      color: #4af;
+      font-weight: bold;
+    }
+  </style>
 </head>
 
 <body>
-  <div id="messages"></div>
+  <div id="log"></div>
 
-  <script type="module">
-    import { renderMessage } from "../../platforms/router.js";
+  <script>
+    const log = document.getElementById("log");
 
-    console.log("Overlay script loaded");
-
-    const messagesContainer = document.getElementById("messages");
-
-    const ws = new WebSocket(
-      location.href.replace("http", "ws")
-    );
-
-    ws.addEventListener("open", () => console.log("WS CONNECTED"));
-    ws.addEventListener("error", (e) => console.log("WS ERROR", e));
-    ws.addEventListener("close", () => console.log("WS CLOSED"));
+    const ws = new WebSocket(location.href.replace("http", "ws"));
 
     ws.addEventListener("message", event => {
-      console.log("RAW BEAM MSG:", event.data);   // ⭐ DEBUG LINE
-
       let msg;
       try {
         msg = JSON.parse(event.data);
@@ -37,10 +43,14 @@
         return;
       }
 
-      const { element, cleanup } = renderMessage(msg);
-      messagesContainer.appendChild(element);
+      const div = document.createElement("div");
+      div.className = "msg";
 
-      if (typeof cleanup === "function") cleanup();
+      div.innerHTML =
+        "<div class='platform'>Platform: " + msg.platform + "</div>" +
+        JSON.stringify(msg, null, 2);
+
+      log.prepend(div);
     });
   </script>
 </body>
