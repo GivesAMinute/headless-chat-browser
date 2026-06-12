@@ -138,7 +138,7 @@
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
 
-    /* PLATFORM ICON (Beam now included normally) */
+    /* PLATFORM ICON (Beam included normally) */
     const iconPath = getPlatformIcon(msg.platform);
     if (iconPath) {
       const iconHTML = `
@@ -154,6 +154,14 @@
 
     const content = document.createElement("div");
     content.className = "content";
+
+    /* INLINE AVATAR BEFORE USERNAME */
+    if (msg.avatar) {
+      const inlineAvatar = document.createElement("img");
+      inlineAvatar.className = "inline-avatar";
+      inlineAvatar.src = msg.avatar;
+      content.appendChild(inlineAvatar);
+    }
 
     /* Velora badges */
     if (msg.platform === "velora" && msg.badges?.length) {
@@ -241,4 +249,3 @@
 </script>
 </body>
 </html>
-
