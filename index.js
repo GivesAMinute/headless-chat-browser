@@ -5,9 +5,10 @@ import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { startYouTube } from "./sources/youtube.js";
-import { startBlazeScraper } from "./sources/blaze.js";   // ⭐ FIXED
-import { startVeloraChat } from "./sources/velora.js";     // ⭐ CORRECT
+// ⭐ Correct imports matching your actual files
+import { startYouTubeScraper } from "./sources/youtube.js";
+import { startBlazeScraper } from "./sources/blaze.js";
+import { startVeloraChat } from "./sources/velora.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -266,8 +267,9 @@ const server = app.listen(port, () => {
     })
     .catch((err) => console.error("Startup error:", err));
 
-  startYouTube(broadcast);
-  startBlazeScraper({ broadcast });   // ⭐ FIXED
+  // ⭐ Correct calls
+  startYouTubeScraper({ broadcast });
+  startBlazeScraper({ broadcast });
 });
 
 server.on("upgrade", (req, socket, head) => {
