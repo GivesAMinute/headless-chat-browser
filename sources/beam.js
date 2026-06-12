@@ -1,14 +1,22 @@
 // sources/beam.js
 import puppeteer from "puppeteer";
 
-export async function startBeamScraper({ browser, broadcast }) {
+export async function startBeamChat() {
   console.log("Starting Beam scraper…");
 
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--disable-software-rasterizer",
+      "--autoplay-policy=no-user-gesture-required"
+    ]
+  });
+
   const page = await browser.newPage();
-
-  page.on("console", (msg) => console.log("BEAM LOG:", msg.text()));
-
-  console.log("Injecting Beam login session…");
 
   await page.goto("https://beamstream.gg", { waitUntil: "domcontentloaded" });
 
@@ -20,15 +28,11 @@ export async function startBeamScraper({ browser, broadcast }) {
     }
   }, storage);
 
-  console.log("Beam session injected. Loading chat…");
-
   await page.goto("https://beamstream.gg/givesaminute/chat", {
     waitUntil: "networkidle2"
   });
 
   await new Promise((resolve) => setTimeout(resolve, 5000));
-
-  console.log("Injecting Beam message observer…");
 
   await page.exposeFunction("relayMessage", (msg) => {
     broadcast(msg);
