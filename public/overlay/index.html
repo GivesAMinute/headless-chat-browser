@@ -26,14 +26,19 @@
         return;
       }
 
-      // Render the message using your router + platform renderers
-      const el = renderMessage(msg);
+      // ⭐ FIX: your renderers return { element, cleanup }
+      const rendered = renderMessage(msg);
+      if (!rendered) return;
 
-      if (!el) return;
+      const { element, cleanup } = rendered;
 
-      container.appendChild(el);
+      container.appendChild(element);
 
-      // Auto‑trim old messages
+      if (typeof cleanup === "function") {
+        cleanup();
+      }
+
+      // Trim old messages
       while (container.children.length > 50) {
         container.removeChild(container.firstChild);
       }
