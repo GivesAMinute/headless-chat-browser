@@ -1,7 +1,7 @@
 // sources/youtube.js
 import fetch from "node-fetch";
 
-export async function startYouTubeScraper({ broadcast }) {
+export async function startYouTube(broadcast) {
   const apiKey = process.env.YOUTUBE_API_KEY;
   const channelId = process.env.YOUTUBE_CHANNEL_ID;
 

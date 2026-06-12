@@ -1,6 +1,6 @@
 // sources/twitch.js
 
-export async function startTwitchScraper({ browser, broadcast }) {
+export async function startTwitchChat(browser, broadcast) {
   console.log("Starting Twitch scraper…");
 
   const page = await browser.newPage();

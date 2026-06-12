@@ -1,7 +1,7 @@
 // sources/beam.js
 import puppeteer from "puppeteer";
 
-export async function startBeamChat() {
+export async function startBeam(broadcast) {
   console.log("Starting Beam scraper…");
 
   const browser = await puppeteer.launch({
