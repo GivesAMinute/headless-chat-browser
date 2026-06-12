@@ -83,3 +83,4 @@ export async function startBeam(browser, broadcast) {
 
   console.log("Beam chat observer active.");
 }
+
