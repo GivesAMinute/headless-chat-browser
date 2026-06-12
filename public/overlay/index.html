@@ -12,7 +12,8 @@
   <div id="chat-container"></div>
 
   <script type="module">
-    import { renderMessage } from "./router.js";
+    // ⭐ CORRECT PATH BASED ON YOUR REAL FILE STRUCTURE
+    import { renderMessage } from "../platforms/router.js";
 
     const container = document.getElementById("chat-container");
 
@@ -26,13 +27,15 @@
         return;
       }
 
-      // ⭐ FIX: your renderers return { element, cleanup }
+      // Your renderers return { element, cleanup }
       const rendered = renderMessage(msg);
       if (!rendered) return;
 
       const { element, cleanup } = rendered;
 
-      container.appendChild(element);
+      if (element instanceof HTMLElement) {
+        container.appendChild(element);
+      }
 
       if (typeof cleanup === "function") {
         cleanup();
