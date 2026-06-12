@@ -4,207 +4,9 @@
 <meta charset="UTF-8" />
 <title>Merged Chat Overlay</title>
 
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+<link rel="stylesheet" href="overlay.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
-  body {
-    margin: 0;
-    background: transparent;
-    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    overflow: hidden;
-  }
-
-  #messages {
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
-
-  .msg {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-  }
-
-  .platform-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 6px;
-    flex-shrink: 0;
-  }
-
-  .avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  .bubble {
-    background: rgba(0,0,0,0.85);
-    color: white;
-    padding: 10px 14px;
-    border-radius: 14px;
-    font-size: 20px;
-    max-width: 90%;
-    display: inline-block;
-    backdrop-filter: blur(6px);
-    animation: fadeIn 0.8s ease-out;
-    word-break: break-word;
-    white-space: normal;
-  }
-
-  .username {
-    font-weight: 600;
-    margin-bottom: 4px;
-    display: inline-block;
-  }
-
-  /* OG: outline-only orange rectangle */
-  .blaze-og-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #ff6600;
-    color: #ff6600;
-    background: transparent;
-    padding: 1px 4px;
-    border-radius: 4px;
-    margin-right: 4px;
-    height: 14px;
-  }
-
-  .blaze-og-badge svg {
-    width: 12px;
-    height: 12px;
-  }
-
-  /* VIP: outline-only yellow rectangle */
-  .blaze-vip-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    border: 1px solid #facc15;
-    color: #facc15;
-    background: transparent;
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-size: 10px;
-    line-height: 1;
-    margin-right: 4px;
-    height: 14px;
-  }
-
-  .blaze-vip-badge img {
-    width: 12px;
-    height: 12px;
-  }
-
-  /* Wrapper to align Mod + Streamer with OG/VIP */
-  .blaze-icon-wrapper {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: 14px;
-    margin-right: 4px;
-    position: relative;
-    top: 2px;
-  }
-
-  /* 17px size for moderator + streamer icons */
-  .blaze-large-icon {
-    width: 17px !important;
-    height: 17px !important;
-    vertical-align: middle;
-  }
-
-  .velora-inline-badge {
-    width: 12px;
-    height: 12px;
-    margin-right: 4px;
-    vertical-align: middle;
-    display: inline-block;
-    background: none !important;
-    border: none !important;
-    padding: 0 !important;
-  }
-
-  /* Tooltip system */
-  .tooltip-wrapper {
-    position: relative;
-    display: inline-flex;
-  }
-
-  .tooltip-bubble {
-    position: absolute;
-    bottom: 125%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.85);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 12px;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .15s ease-out;
-  }
-
-  .tooltip-wrapper:hover .tooltip-bubble {
-    opacity: 1;
-  }
-
-  /* Swipe-left exit animation */
-  @keyframes swipeLeft {
-    from {
-      opacity: 1;
-      transform: translateX(0);
-    }
-    to {
-      opacity: 0;
-      transform: translateX(-200px);
-    }
-  }
-
-  .fadeOut {
-    animation: swipeLeft 0.6s ease-out forwards;
-  }
-
-  .bubble img.chat-image {
-    width: 64px;
-    height: 64px;
-    display: inline-block;
-    vertical-align: middle;
-  }
-
-  .bubble img:not(.chat-image) {
-    max-height: 80px;
-  }
-
-  .bubble img.scaled-emote {
-    width: 48px !important;
-    height: 48px !important;
-    vertical-align: middle;
-    display: inline-block;
-  }
-
-  .bubble video {
-    display: block;
-    margin-top: 6px;
-    max-height: 140px;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-</style>
 </head>
 
 <body>
@@ -373,7 +175,7 @@
       });
     }
 
-    /* Blaze role icons (Mod → OG → VIP → Streamer) */
+    /* Blaze role icons */
     if (msg.platform === "blaze") {
       if (msg.isMod)      content.insertAdjacentHTML("beforeend", MOD_SVG);
       if (msg.isOG)       content.insertAdjacentHTML("beforeend", OG_SVG);
@@ -381,7 +183,7 @@
       if (msg.isStreamer) content.insertAdjacentHTML("beforeend", STREAMER_SVG);
     }
 
-    /* Universal badges WITH TOOLTIP */
+    /* Universal badges */
     if (msg.platform !== "velora" && msg.badges?.length) {
       msg.badges.forEach(src => {
         const label = src.split("/").pop().replace(/\.(png|svg)/, "");

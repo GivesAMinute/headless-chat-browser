@@ -1,194 +1,200 @@
-/* --------------------------------------------------
-   GLOBAL RESET + BASE LAYOUT
--------------------------------------------------- */
-
-html, body {
+body {
   margin: 0;
-  padding: 0;
   background: transparent;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   overflow: hidden;
-  font-family: Inter, Arial, sans-serif;
 }
 
-#chat-container {
+#messages {
   position: absolute;
   bottom: 0;
-  left: 0;
   width: 100%;
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 12px;
   padding: 20px;
-  box-sizing: border-box;
-}
-
-/* Fade-in animation for new messages */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
 }
 
 .msg {
   display: flex;
-  flex-direction: row;
   align-items: flex-start;
   gap: 10px;
-  animation: fadeInUp 0.25s ease-out;
 }
 
-/* --------------------------------------------------
-   AVATARS
--------------------------------------------------- */
+.platform-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
 
 .avatar {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   flex-shrink: 0;
 }
-
-.avatar-small {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-/* --------------------------------------------------
-   MESSAGE BUBBLE
--------------------------------------------------- */
 
 .bubble {
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0,0,0,0.85);
+  color: white;
   padding: 10px 14px;
   border-radius: 14px;
-  color: white;
-  max-width: 70%;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-/* --------------------------------------------------
-   HEADER (username + badges)
--------------------------------------------------- */
-
-.header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: nowrap;
+  font-size: 20px;
+  max-width: 90%;
+  display: inline-block;
+  backdrop-filter: blur(6px);
+  animation: fadeIn 0.8s ease-out;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .username {
   font-weight: 600;
-  font-size: 1rem;
-  white-space: nowrap;
+  margin-bottom: 4px;
+  display: inline-block;
 }
 
-/* Badges (all platforms) */
-.header span,
-.header .badges {
+/* OG badge */
+.blaze-og-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ff6600;
+  color: #ff6600;
+  background: transparent;
+  padding: 1px 4px;
+  border-radius: 4px;
+  margin-right: 4px;
+  height: 14px;
+}
+
+.blaze-og-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* VIP badge */
+.blaze-vip-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  flex-wrap: nowrap;
+  border: 1px solid #facc15;
+  color: #facc15;
+  background: transparent;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  line-height: 1;
+  margin-right: 4px;
+  height: 14px;
 }
 
-.header img.badge,
-.header img[data-badge],
-.header span > img {
-  height: 1.5em;
-  width: auto;
+.blaze-vip-badge img {
+  width: 12px;
+  height: 12px;
+}
+
+/* Mod/Streamer wrapper */
+.blaze-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 14px;
+  margin-right: 4px;
+  position: relative;
+  top: 2px;
+}
+
+.blaze-large-icon {
+  width: 17px !important;
+  height: 17px !important;
+  vertical-align: middle;
+}
+
+/* Velora inline badge */
+.velora-inline-badge {
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+  vertical-align: middle;
+  display: inline-block;
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* Tooltip */
+.tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.tooltip-bubble {
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.85);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease-out;
+}
+
+.tooltip-wrapper:hover .tooltip-bubble {
+  opacity: 1;
+}
+
+/* Swipe-left exit */
+@keyframes swipeLeft {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-200px);
+  }
+}
+
+.fadeOut {
+  animation: swipeLeft 0.6s ease-out forwards;
+}
+
+/* Emotes */
+.bubble img.chat-image {
+  width: 64px;
+  height: 64px;
   display: inline-block;
   vertical-align: middle;
 }
 
-/* --------------------------------------------------
-   MESSAGE BODY
--------------------------------------------------- */
-
-.text {
-  font-size: 1.05rem;
-  line-height: 1.35;
-  word-wrap: break-word;
+.bubble img:not(.chat-image) {
+  max-height: 80px;
 }
 
-.text img.emote {
-  height: 1.6em;
+.scaled-emote {
+  width: 48px !important;
+  height: 48px !important;
   vertical-align: middle;
+  display: inline-block;
 }
 
-/* Stickers (Velora, Beam, Blaze) */
-.text video,
-.text img.sticker {
-  max-height: 120px;
-  max-width: 120px;
+/* Stickers / videos */
+.bubble video {
   display: block;
   margin-top: 6px;
+  max-height: 140px;
 }
 
-/* --------------------------------------------------
-   PLATFORM OVERRIDES
--------------------------------------------------- */
-
-.twitch-msg .bubble {
-  background: rgba(92, 0, 255, 0.55);
-}
-
-.youtube-msg .bubble {
-  background: rgba(255, 0, 0, 0.55);
-}
-
-.velora-msg .bubble {
-  background: rgba(0, 150, 255, 0.55);
-}
-
-.beam-msg .bubble {
-  background: rgba(0, 200, 255, 0.55);
-}
-
-.blaze-msg .bubble {
-  background: rgba(255, 120, 0, 0.55);
-}
-
-/* --------------------------------------------------
-   LONG MESSAGE HANDLING
--------------------------------------------------- */
-
-.text p {
-  margin: 0;
-  padding: 0;
-}
-
-.text br + br {
-  display: none;
-}
-
-.text a {
-  color: #4db8ff;
-  word-break: break-all;
-}
-
-/* --------------------------------------------------
-   SCROLL SAFETY
--------------------------------------------------- */
-
-#chat-container::-webkit-scrollbar {
-  display: none;
-}
-
-/* --------------------------------------------------
-   FADE OUT
--------------------------------------------------- */
-
-.fadeOut {
-  opacity: 0;
-  transition: opacity 0.6s ease-out;
+/* Fade-in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
