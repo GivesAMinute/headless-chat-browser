@@ -221,7 +221,7 @@ function startBlazeEventSub(broadcast) {
   });
 }
 
-export function startBlazeScraper({ broadcast }) {
+export function startBlaze(broadcast) {
   const channelId = process.env.BLAZE_CHANNEL_ID;
   const clientId = process.env.BLAZE_CLIENT_ID;
   const accessToken = process.env.BLAZE_ACCESS_TOKEN;
