@@ -242,3 +242,4 @@ export function startBlaze(broadcast) {
   poller.start();
   startBlazeEventSub(broadcast);
 }
+
