@@ -12,14 +12,12 @@
   <div id="messages"></div>
 
   <script type="module">
-    // ⭐ Correct path: index.html → overlay → public → root → platforms
     import { renderMessage } from "../../platforms/router.js";
 
     console.log("Overlay script loaded");
 
     const messagesContainer = document.getElementById("messages");
 
-    // ⭐ MUST connect to the exact overlay URL
     const ws = new WebSocket(
       location.href.replace("http", "ws")
     );
@@ -29,6 +27,8 @@
     ws.addEventListener("close", () => console.log("WS CLOSED"));
 
     ws.addEventListener("message", event => {
+      console.log("RAW BEAM MSG:", event.data);   // ⭐ DEBUG LINE
+
       let msg;
       try {
         msg = JSON.parse(event.data);
