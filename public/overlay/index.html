@@ -89,8 +89,36 @@
   const VIP_SVG = `...`;
   const STREAMER_SVG = `...`;
 
-  ws.onmessage = (event) => {
-    const msg = JSON.parse(event.data);
+  // NEW: helper to fetch Velora avatar on the client if backend didn't provide one
+  async function ensureVeloraAvatar(msg) {
+    if (msg.platform !== "velora") return msg;
+    if (msg.avatar && typeof msg.avatar === "string" && msg.avatar.startsWith("http")) {
+      return msg;
+    }
+    if (!msg.username) return msg;
+
+    try {
+      const res = await fetch(
+        `https://velora.tv/api/users/${encodeURIComponent(msg.username)}`,
+        { method: "GET" }
+      );
+      if (!res.ok) return msg;
+
+      const data = await res.json();
+      if (data && typeof data.avatarUrl === "string" && data.avatarUrl.startsWith("http")) {
+        msg.avatar = data.avatarUrl;
+      }
+    } catch (e) {
+      console.warn("Velora avatar fetch failed in overlay:", e);
+    }
+    return msg;
+  }
+
+  ws.onmessage = async (event) => {
+    let msg = JSON.parse(event.data);
+
+    // If Velora and no avatar came from backend, try to fill it here
+    msg = await ensureVeloraAvatar(msg);
 
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
@@ -156,19 +184,19 @@
 
     /* USERNAME */
     let cleanName = msg.username;
-    if (msg.platform === "youtube" && cleanName.startsWith("@")) {
+    if (msg.platform === "youtube" && cleanName && cleanName.startsWith("@")) {
       cleanName = cleanName.substring(1);
     }
 
     const name = document.createElement("div");
     name.className = "username";
-    name.textContent = cleanName;
-    name.style.color = colorForUsername(cleanName, msg.platform);
+    name.textContent = cleanName || "";
+    name.style.color = colorForUsername(cleanName || "", msg.platform);
     content.appendChild(name);
 
     /* MESSAGE TEXT */
     const text = document.createElement("div");
-    text.className = "text"; /* NEW — indent */
+    text.className = "text"; /* indent */
     text.innerHTML = msg.html;
 
     text.querySelectorAll("img").forEach(img => {
