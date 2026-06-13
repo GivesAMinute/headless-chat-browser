@@ -1,5 +1,7 @@
 // sources/velora.js
 
+import { sanitizeHTML } from "../utils/sanitizeHTML.js";
+
 export async function startVelora(browser, broadcast) {
   console.log("Starting Velora scraper…");
 
@@ -42,7 +44,7 @@ export async function startVelora(browser, broadcast) {
     }
   }
 
-  // Relay with avatar enrichment
+  // Relay with avatar enrichment + backend sanitization
   await page.exposeFunction("relayVelora", async (msg) => {
     console.log("VELORA DEBUG incoming:", msg);
 
@@ -72,7 +74,7 @@ export async function startVelora(browser, broadcast) {
           const usernameEl = node.querySelector(".username");
           const username = usernameEl ? usernameEl.innerText.trim() : null;
 
-          // MESSAGE HTML
+          // MESSAGE HTML (raw)
           const textEl = node.querySelector(".text");
           const html = textEl ? textEl.innerHTML : "";
 
@@ -84,10 +86,11 @@ export async function startVelora(browser, broadcast) {
               src.includes("assets.velora.tv/badges")
             );
 
+          // ⭐ Send safeHtml instead of html
           window.relayVelora({
             platform: "velora",
             username,
-            html,
+            safeHtml: html,   // sanitized on Node side
             badges
           });
         }

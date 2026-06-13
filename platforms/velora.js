@@ -1,7 +1,6 @@
 // platforms/velora.js
 
 import { colorForUsername } from "../utils/usernameColors.js";
-import { sanitizeHTML } from "../utils/sanitizeHTML.js";
 import { renderVeloraBadges } from "../badges/veloraBadges.js";
 
 /* ---------------------------------------------------------
@@ -10,7 +9,6 @@ import { renderVeloraBadges } from "../badges/veloraBadges.js";
 
 const veloraBadgeHTMLCache = new Map();
 
-/* Cache badge HTML so we don't re-render or re-parse it */
 function getCachedBadgeHTML(badges) {
   const key = badges.join("|");
   if (veloraBadgeHTMLCache.has(key)) {
@@ -23,8 +21,7 @@ function getCachedBadgeHTML(badges) {
 }
 
 /* ---------------------------------------------------------
-   PERFORMANCE LAYER: FAST EMOTE/STICKER SCAN
-   (Single pass, no querySelectorAll)
+   FAST INLINE MEDIA HANDLER
 --------------------------------------------------------- */
 
 function optimizeInlineMedia(textEl) {
@@ -49,14 +46,13 @@ function optimizeInlineMedia(textEl) {
 }
 
 /* ---------------------------------------------------------
-   MAIN RENDERER (Optimized)
+   MAIN RENDERER (Backend-Sanitized Version)
 --------------------------------------------------------- */
 
 export function renderVeloraMessage(msg) {
   const wrapper = document.createElement("div");
   wrapper.className = "msg velora-msg";
 
-  /* Big platform icon */
   const bigAvatar = document.createElement("img");
   bigAvatar.className = "avatar";
   bigAvatar.src = "/icons/velora.png";
@@ -65,24 +61,20 @@ export function renderVeloraMessage(msg) {
   const bubble = document.createElement("div");
   bubble.className = "bubble";
 
-  /* Header row */
   const header = document.createElement("div");
   header.className = "header";
 
-  /* Small avatar */
   const smallAvatar = document.createElement("img");
   smallAvatar.className = "avatar-small";
   smallAvatar.src = msg.avatar || "/icons/user-default.png";
   header.appendChild(smallAvatar);
 
-  /* Username */
   const name = document.createElement("span");
   name.className = "username";
   name.textContent = msg.username;
   name.style.color = colorForUsername(msg.username, "velora");
   header.appendChild(name);
 
-  /* Badges (cached HTML) */
   if (msg.badges?.length) {
     const badgeContainer = document.createElement("span");
     badgeContainer.innerHTML = getCachedBadgeHTML(msg.badges);
@@ -91,14 +83,12 @@ export function renderVeloraMessage(msg) {
 
   bubble.appendChild(header);
 
-  /* Text row */
   const text = document.createElement("div");
   text.className = "text";
 
-  // Sanitization is still applied, but only once
-  text.innerHTML = sanitizeHTML(msg.html);
+  // ⭐ Backend-sanitized HTML
+  text.innerHTML = msg.safeHtml || "";
 
-  // Optimized media handling
   optimizeInlineMedia(text);
 
   bubble.appendChild(text);
@@ -107,10 +97,10 @@ export function renderVeloraMessage(msg) {
   return {
     element: wrapper,
     cleanup() {
-      setTimeout(() => {
-        bubble.classList.add("fadeOut");
-        setTimeout(() => wrapper.remove(), 600);
-      }, 45000);
+    setTimeout(() => {
+      bubble.classList.add("fadeOut");
+      setTimeout(() => wrapper.remove(), 600);
+    }, 45000);
     }
   };
 }
