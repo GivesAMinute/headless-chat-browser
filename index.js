@@ -252,8 +252,40 @@ async function startVeloraChat() {
     { waitUntil: "networkidle2" }
   );
 
-  await veloraPage.exposeFunction("relayVelora", (msg) => {
-    broadcast(msg);
+  // Enrich Velora messages with avatar before broadcasting
+  await veloraPage.exposeFunction("relayVelora", async (msg) => {
+    try {
+      let avatar = null;
+
+      if (msg.username) {
+        try {
+          const res = await fetch(
+            `https://velora.tv/api/users/${encodeURIComponent(msg.username)}`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            if (data && typeof data.avatarUrl === "string") {
+              avatar = data.avatarUrl;
+            }
+          } else {
+            console.warn("Velora avatar API non-OK:", res.status, msg.username);
+          }
+        } catch (e) {
+          console.error("Velora avatar fetch failed:", e);
+        }
+      }
+
+      const enriched = {
+        ...msg,
+        avatar
+      };
+
+      console.log("VELORA OUT:", enriched);
+      broadcast(enriched);
+    } catch (e) {
+      console.error("relayVelora error:", e);
+      broadcast(msg);
+    }
   });
 
   await veloraPage.evaluate(() => {
@@ -285,7 +317,6 @@ async function startVeloraChat() {
         platform: "velora",
         username,
         html,
-        avatar: null,
         badges
       });
     });
