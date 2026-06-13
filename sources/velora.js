@@ -62,20 +62,37 @@ export async function startVelora(browser, broadcast) {
 
   // DOM observer inside Velora chat page
   await page.evaluate(() => {
-    const safe = (el, selector) => {
-      try { return el.querySelector(selector) || null; }
-      catch { return null; }
-    };
+  const observer = new MutationObserver(() => {
+    const nodes = [...document.querySelectorAll(".msg")];
+    const last = nodes[nodes.length - 1];
+    if (!last) return;
 
-    const safeText = (el, selector, fallback = "") => {
-      const node = safe(el, selector);
-      return node?.innerText?.trim() || fallback;
-    };
+    // USERNAME
+    const usernameEl = last.querySelector(".username");
+    let username = usernameEl ? usernameEl.innerText.trim() : null;
 
-    const observer = new MutationObserver(() => {
-      const nodes = [...document.querySelectorAll(".chat-message-content")];
-      const last = nodes[nodes.length - 1];
-      if (!last) return;
+    // MESSAGE HTML
+    const textEl = last.querySelector(".text");
+    const html = textEl ? textEl.innerHTML : "";
+
+    // BADGES
+    const badges = [...last.querySelectorAll("img")]
+      .map(img => img.src)
+      .filter(src =>
+        src.includes("velora-badges") ||
+        src.includes("assets.velora.tv/badges")
+      );
+
+    window.relayVelora({
+      platform: "velora",
+      username,
+      html,
+      badges
+    });
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+});
 
       // USERNAME (Velora uses <button>GivesAMinute:</button>)
       let username = safeText(last, "button");
