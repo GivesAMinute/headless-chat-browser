@@ -83,12 +83,10 @@
     return `hsl(${hue}, 70%, 60%)`;
   }
 
-  /* ⭐ RESTORED BLAZE ROLE ICONS */
+  /* ⭐ RESTORED BLAZE ROLE ICONS — MATCHING YOUR OLD LOOK */
   const MOD_SVG = `
 <span class="blaze-icon-wrapper">
-  <svg class="blaze-large-icon" viewBox="0 0 24 24" fill="#4ade80">
-    <path d="M12 2L3 6v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V6l-9-4z"></path>
-  </svg>
+  <img class="blaze-large-icon" src="/icons/blaze-mod.png" alt="Mod">
 </span>`;
 
   const OG_SVG = `
@@ -96,14 +94,12 @@
 
   const VIP_SVG = `
 <span class="blaze-vip-badge">
-  <img src="/icons/vip.png" alt="VIP"> VIP
+  <img src="/icons/blaze-vip.png" alt="VIP"> VIP
 </span>`;
 
   const STREAMER_SVG = `
 <span class="blaze-icon-wrapper">
-  <svg class="blaze-large-icon" viewBox="0 0 24 24" fill="#facc15">
-    <path d="M12 2l9 4v6c0 5.55-3.84 10.74-9 12-5.16-1.26-9-6.45-9-12V6l9-4z"></path>
-  </svg>
+  <img class="blaze-large-icon" src="/icons/blaze-streamer.png" alt="Streamer">
 </span>`;
 
   // Velora avatar fallback
@@ -168,7 +164,7 @@
       content.appendChild(inlineAvatar);
     }
 
-    /* Velora badges */
+    /* ⭐ Velora badges (unchanged) */
     if (msg.platform === "velora" && msg.badges?.length) {
       msg.badges.forEach(src => {
         const label = src.split("/").pop().replace(/\.(png|svg)/, "");
@@ -181,7 +177,7 @@
       });
     }
 
-    /* Blaze role icons */
+    /* ⭐ Blaze role icons — ONLY these, no generic badges */
     if (msg.platform === "blaze") {
       if (msg.isMod)      content.insertAdjacentHTML("beforeend", MOD_SVG);
       if (msg.isOG)       content.insertAdjacentHTML("beforeend", OG_SVG);
@@ -189,8 +185,8 @@
       if (msg.isStreamer) content.insertAdjacentHTML("beforeend", STREAMER_SVG);
     }
 
-    /* Universal badges */
-    if (msg.platform !== "velora" && msg.badges?.length) {
+    /* ⭐ Universal badges — EXCLUDE Blaze */
+    if (msg.platform !== "velora" && msg.platform !== "blaze" && msg.badges?.length) {
       msg.badges.forEach(src => {
         const label = src.split("/").pop().replace(/\.(png|svg)/, "");
         content.insertAdjacentHTML("beforeend", `
