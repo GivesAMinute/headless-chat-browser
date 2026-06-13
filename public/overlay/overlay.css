@@ -218,7 +218,7 @@ body {
 }
 
 /* ============================================================
-   VELORA-ONLY: align text under username using a small grid
+   Velora-only alignment (corrected with header wrapper)
    ============================================================ */
 
 .msg.platform-velora .bubble .content {
@@ -229,26 +229,28 @@ body {
   align-items: center;
 }
 
-/* Avatar: left column, spans both rows */
+/* Avatar spans both rows */
 .msg.platform-velora .inline-avatar {
   grid-column: 1;
   grid-row: 1 / span 2;
-  margin-right: 0; /* grid handles spacing */
+  margin-right: 0;
 }
 
-/* Badges + username: top row, right column */
-.msg.platform-velora .velora-inline-badge,
-.msg.platform-velora .tooltip-wrapper,
-.msg.platform-velora .username {
+/* Header (badges + username) sits in row 1, column 2 */
+.msg.platform-velora .velora-header {
   grid-column: 2;
   grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-/* Message text: second row, right column, no extra padding */
+/* Text sits under username */
 .msg.platform-velora .text {
   grid-column: 2;
   grid-row: 2;
-  padding-left: 0;   /* override global 32px */
+  padding-left: 0;
   margin-left: 0;
 }
+
 

@@ -121,13 +121,9 @@
     msg = await ensureVeloraAvatar(msg);
 
     const wrapper = document.createElement("div");
-wrapper.className = "msg";
-if (msg.platform) {
-  wrapper.classList.add(`platform-${msg.platform.toLowerCase()}`);
-}
+    wrapper.className = "msg";
 
-
-    // ADD PLATFORM CLASS
+    // ADD PLATFORM CLASS (fixed duplicate)
     if (msg.platform) {
       wrapper.classList.add(`platform-${msg.platform.toLowerCase()}`);
     }
@@ -157,11 +153,19 @@ if (msg.platform) {
       content.appendChild(inlineAvatar);
     }
 
+    /* ⭐ NEW: Velora header wrapper */
+    let headerWrapper = null;
+    if (msg.platform === "velora") {
+      headerWrapper = document.createElement("div");
+      headerWrapper.className = "velora-header";
+      content.appendChild(headerWrapper);
+    }
+
     /* Velora badges */
     if (msg.platform === "velora" && msg.badges?.length) {
       msg.badges.forEach(src => {
         const label = src.split("/").pop().replace(/\.(png|svg)/, "");
-        content.insertAdjacentHTML("beforeend", `
+        (headerWrapper || content).insertAdjacentHTML("beforeend", `
           <span class="tooltip-wrapper">
             <img class="velora-inline-badge" src="${src}">
             <span class="tooltip-bubble">${label}</span>
@@ -201,7 +205,10 @@ if (msg.platform) {
     name.className = "username";
     name.textContent = cleanName || "";
     name.style.color = colorForUsername(cleanName || "", msg.platform);
-    content.appendChild(name);
+
+    // ⭐ Velora username goes into header wrapper
+    if (headerWrapper) headerWrapper.appendChild(name);
+    else content.appendChild(name);
 
     /* MESSAGE TEXT */
     const text = document.createElement("div");
