@@ -216,3 +216,14 @@ body {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+
+/* ============================================================
+   ⭐ VELORA‑ONLY ALIGNMENT FIX (SAFE, NON‑BREAKING)
+   ============================================================ */
+
+.msg.platform-velora .text {
+  padding-left: 0;          /* remove universal indent */
+  margin-left: 32px;        /* indent under username */
+  display: block;
+}
