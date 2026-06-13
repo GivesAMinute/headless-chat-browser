@@ -89,7 +89,7 @@
   const VIP_SVG = `...`;
   const STREAMER_SVG = `...`;
 
-  // NEW: helper to fetch Velora avatar on the client if backend didn't provide one
+  // Velora avatar fallback
   async function ensureVeloraAvatar(msg) {
     if (msg.platform !== "velora") return msg;
     if (msg.avatar && typeof msg.avatar === "string" && msg.avatar.startsWith("http")) {
@@ -117,13 +117,12 @@
   ws.onmessage = async (event) => {
     let msg = JSON.parse(event.data);
 
-    // If Velora and no avatar came from backend, try to fill it here
     msg = await ensureVeloraAvatar(msg);
 
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
 
-    // ADD PLATFORM CLASS (fixed duplicate)
+    // Keep platform class (this is harmless + useful)
     if (msg.platform) {
       wrapper.classList.add(`platform-${msg.platform.toLowerCase()}`);
     }
@@ -131,12 +130,12 @@
     /* PLATFORM ICON */
     const iconPath = getPlatformIcon(msg.platform);
     if (iconPath) {
-      const iconHTML = `
+      wrapper.insertAdjacentHTML("beforeend", `
         <span class="tooltip-wrapper">
           <img class="platform-icon" src="${iconPath}">
           <span class="tooltip-bubble">${msg.platform.toUpperCase()}</span>
-        </span>`;
-      wrapper.insertAdjacentHTML("beforeend", iconHTML);
+        </span>
+      `);
     }
 
     const bubble = document.createElement("div");
@@ -153,19 +152,11 @@
       content.appendChild(inlineAvatar);
     }
 
-    /* ⭐ NEW: Velora header wrapper */
-    let headerWrapper = null;
-    if (msg.platform === "velora") {
-      headerWrapper = document.createElement("div");
-      headerWrapper.className = "velora-header";
-      content.appendChild(headerWrapper);
-    }
-
     /* Velora badges */
     if (msg.platform === "velora" && msg.badges?.length) {
       msg.badges.forEach(src => {
         const label = src.split("/").pop().replace(/\.(png|svg)/, "");
-        (headerWrapper || content).insertAdjacentHTML("beforeend", `
+        content.insertAdjacentHTML("beforeend", `
           <span class="tooltip-wrapper">
             <img class="velora-inline-badge" src="${src}">
             <span class="tooltip-bubble">${label}</span>
@@ -197,7 +188,7 @@
 
     /* USERNAME */
     let cleanName = msg.username;
-    if (msg.platform === "youtube" && cleanName && cleanName.startsWith("@")) {
+    if (msg.platform === "youtube" && cleanName?.startsWith("@")) {
       cleanName = cleanName.substring(1);
     }
 
@@ -205,10 +196,7 @@
     name.className = "username";
     name.textContent = cleanName || "";
     name.style.color = colorForUsername(cleanName || "", msg.platform);
-
-    // ⭐ Velora username goes into header wrapper
-    if (headerWrapper) headerWrapper.appendChild(name);
-    else content.appendChild(name);
+    content.appendChild(name);
 
     /* MESSAGE TEXT */
     const text = document.createElement("div");
@@ -222,9 +210,7 @@
 
       if (!isSmall) return;
 
-      if (msg.platform === "youtube" ||
-          msg.platform === "velora" ||
-          msg.platform === "blaze") {
+      if (["youtube", "velora", "blaze"].includes(msg.platform)) {
         img.classList.add("scaled-emote");
       }
     });
