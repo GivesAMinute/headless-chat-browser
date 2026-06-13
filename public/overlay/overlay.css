@@ -36,7 +36,7 @@ body {
   flex-shrink: 0;
 }
 
-/* NEW — inline avatar inside bubble */
+/* Inline avatar inside bubble */
 .inline-avatar {
   width: 26px;
   height: 26px;
@@ -66,6 +66,12 @@ body {
   margin-bottom: 4px;
   display: inline-block;
   line-height: 1;
+}
+
+/* NEW — indent message text under username */
+.text {
+  padding-left: 32px; /* 26px avatar + 6px gap */
+  display: block;
 }
 
 /* OG badge */
