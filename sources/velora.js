@@ -44,30 +44,77 @@ export async function startVelora(browser, broadcast) {
     }
   }
 
-  // Relay with avatar enrichment + backend sanitization
+  // Relay with avatar enrichment + backend sanitization + reward support
   await page.exposeFunction("relayVelora", async (msg) => {
     console.log("VELORA DEBUG incoming:", msg);
 
+    // ⭐ Reward card path
+    if (msg.type === "reward") {
+      const enrichedReward = {
+        platform: "velora",
+        type: "reward",
+        rewardHTML: msg.rewardHTML,
+        username: msg.username,
+        rewardName: msg.rewardName,
+        rewardIcon: msg.rewardIcon
+      };
+
+      console.log("VELORA DEBUG outgoing REWARD:", enrichedReward);
+      broadcast(enrichedReward);
+      return;
+    }
+
+    // ⭐ Normal chat message path
     const avatar = await fetchVeloraAvatar(msg.username);
 
     const enriched = {
       ...msg,
-      avatar
+      avatar,
+      safeHtml: sanitizeHTML(msg.safeHtml)
     };
 
-    console.log("VELORA DEBUG outgoing:", enriched);
-
+    console.log("VELORA DEBUG outgoing CHAT:", enriched);
     broadcast(enriched);
   });
 
-  // Optimized Velora DOM observer: only process newly added .msg nodes
+  // Optimized Velora DOM observer: process .msg AND reward cards
   await page.evaluate(() => {
     const observer = new MutationObserver((mutations) => {
       for (const m of mutations) {
         for (const node of m.addedNodes) {
           if (!(node instanceof HTMLElement)) continue;
 
-          // Only handle actual chat message containers
+          // ⭐ Detect reward cards (full wrapper)
+          if (node.classList.contains("mx-1") && node.classList.contains("my-1.5")) {
+            const rewardHTML = node.outerHTML;
+
+            // Username
+            const usernameEl = node.querySelector(".animate-[glow_2s_ease-in-out_infinite]");
+            const username = usernameEl
+              ? usernameEl.innerText.replace(":", "").trim()
+              : null;
+
+            // Reward name
+            const rewardNameEl = node.querySelector(".animate-pulse span");
+            const rewardName = rewardNameEl ? rewardNameEl.innerText.trim() : null;
+
+            // Reward icon (SVG or IMG)
+            const iconEl = node.querySelector(".flex.h-12.w-12 svg, .flex.h-12.w-12 img");
+            const rewardIcon = iconEl ? iconEl.outerHTML : null;
+
+            window.relayVelora({
+              platform: "velora",
+              type: "reward",
+              rewardHTML,
+              username,
+              rewardName,
+              rewardIcon
+            });
+
+            continue; // Prevent falling through to normal chat logic
+          }
+
+          // ⭐ Normal chat messages
           if (!node.classList.contains("msg")) continue;
 
           // USERNAME
@@ -86,11 +133,11 @@ export async function startVelora(browser, broadcast) {
               src.includes("assets.velora.tv/badges")
             );
 
-          // ⭐ Send safeHtml instead of html
+          // Send safeHtml (sanitized on Node side)
           window.relayVelora({
             platform: "velora",
             username,
-            safeHtml: html,   // sanitized on Node side
+            safeHtml: html,
             badges
           });
         }

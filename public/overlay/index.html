@@ -83,8 +83,7 @@
     return `hsl(${hue}, 70%, 60%)`;
   }
 
-  /* ⭐ RESTORED EXACT BLAZE ROLE ICONS (from pre‑V3) */
-
+  /* Blaze role icons (unchanged) */
   const MOD_SVG = `
 <span class="tooltip-wrapper">
   <span class="blaze-icon-wrapper">
@@ -132,7 +131,7 @@
   <span class="tooltip-bubble">Streamer</span>
 </span>`;
 
-  /* ⭐ NEW: Velora avatar + badge caches */
+  /* Velora caches */
   const veloraAvatarCache = new Map();
   const veloraBadgeCache = new Map();
 
@@ -166,7 +165,6 @@
     return msg;
   }
 
-  /* ⭐ NEW: Preload Velora badge images */
   function getCachedVeloraBadge(src) {
     if (veloraBadgeCache.has(src)) {
       return veloraBadgeCache.get(src);
@@ -178,10 +176,35 @@
     return img;
   }
 
+  /* ⭐ NEW — INLINE REWARD CARD RENDERER */
+  function renderVeloraRewardMessage(msg) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "velora-reward-wrapper";
+
+    // Insert Velora's full HTML exactly as-is
+    wrapper.innerHTML = msg.rewardHTML;
+
+    document.getElementById("messages").appendChild(wrapper);
+
+    // Fade out after 45 seconds
+    setTimeout(() => {
+      wrapper.classList.add("fade-out");
+      setTimeout(() => wrapper.remove(), 1000);
+    }, 45000);
+  }
+
   ws.onmessage = async (event) => {
     let msg = JSON.parse(event.data);
 
     msg = await ensureVeloraAvatar(msg);
+
+    /* ⭐ NEW — Reward message routing */
+    if (msg.platform === "velora" && msg.type === "reward") {
+      renderVeloraRewardMessage(msg);
+      return;
+    }
+
+    /* ⭐ NORMAL CHAT MESSAGE RENDERING BELOW (unchanged) */
 
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
@@ -215,10 +238,10 @@
       content.appendChild(inlineAvatar);
     }
 
-    /* ⭐ Velora badges (cached) */
+    /* Velora badges */
     if (msg.platform === "velora" && msg.badges?.length) {
       msg.badges.forEach(src => {
-        getCachedVeloraBadge(src); // preload
+        getCachedVeloraBadge(src);
 
         const label = src.split("/").pop().replace(/\.(png|svg)/, "");
         content.insertAdjacentHTML("beforeend", `
@@ -238,7 +261,7 @@
       if (msg.isStreamer) content.insertAdjacentHTML("beforeend", STREAMER_SVG);
     }
 
-    /* Universal badges — EXCLUDE Blaze */
+    /* Universal badges */
     if (msg.platform !== "velora" && msg.platform !== "blaze" && msg.badges?.length) {
       msg.badges.forEach(src => {
         const label = src.split("/").pop().replace(/\.(png|svg)/, "");
