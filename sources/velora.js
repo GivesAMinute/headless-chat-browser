@@ -5,26 +5,29 @@ export async function startVelora(browser, broadcast) {
 
   const page = await browser.newPage();
 
-  // TODO: if you ever change channel, make this dynamic
+  // TODO: change this if your channel changes
   await page.goto("https://velora.tv/givesaminute/chat", {
     waitUntil: "networkidle2"
   });
 
-  // Simple in-memory avatar cache
+  // Avatar cache to avoid repeated API calls
   const avatarCache = Object.create(null);
 
   async function fetchVeloraAvatar(username) {
     if (!username) return null;
 
-    // Use cache if we already looked this user up
+    // Use cache if available
     if (avatarCache[username]) {
       return avatarCache[username];
     }
 
     try {
-      const res = await fetch(`https://velora.tv/api/users/${encodeURIComponent(username)}`);
+      const res = await fetch(
+        `https://velora.tv/api/users/${encodeURIComponent(username)}`
+      );
+
       if (!res.ok) {
-        console.warn("Velora avatar API non-OK for", username, res.status);
+        console.warn("Velora API returned non-OK for", username, res.status);
         avatarCache[username] = null;
         return null;
       }
@@ -32,28 +35,32 @@ export async function startVelora(browser, broadcast) {
       const data = await res.json();
       const url = data.avatarUrl || null;
 
-      avatarCache[username] = url || null;
-      return url || null;
+      avatarCache[username] = url;
+      return url;
     } catch (err) {
-      console.error("Velora avatar fetch failed for", username, err);
+      console.error("Velora avatar fetch failed:", err);
       avatarCache[username] = null;
       return null;
     }
   }
 
-  // Expose a relay that enriches messages with avatar before broadcasting
+  // Relay function that enriches message with avatar before broadcasting
   await page.exposeFunction("relayVelora", async (msg) => {
-  console.log("VELORA DEBUG:", msg);   // <— ADD THIS
-  const avatar = await fetchVeloraAvatar(msg.username);
-  broadcast({ ...msg, avatar });
-});
+    console.log("VELORA DEBUG (incoming from page):", msg);
 
-    } catch (err) {
-      console.error("relayVelora error:", err);
-      broadcast(msg);
-    }
+    const avatar = await fetchVeloraAvatar(msg.username);
+
+    const enriched = {
+      ...msg,
+      avatar
+    };
+
+    console.log("VELORA DEBUG (outgoing to overlay):", enriched);
+
+    broadcast(enriched);
   });
 
+  // DOM observer inside Velora chat page
   await page.evaluate(() => {
     const safe = (el, selector) => {
       try { return el.querySelector(selector) || null; }
@@ -70,11 +77,11 @@ export async function startVelora(browser, broadcast) {
       const last = nodes[nodes.length - 1];
       if (!last) return;
 
-      // USERNAME (Velora uses a <button> element with "Name:")
+      // USERNAME (Velora uses <button>GivesAMinute:</button>)
       let username = safeText(last, "button");
       username = username.replace(/:$/, "").trim();
 
-      // MESSAGE TEXT (Velora uses span.text-white/90)
+      // MESSAGE TEXT
       const msgNode =
         safe(last, "span.text-white\\/90") ||
         safe(last, "span.text-white") ||
@@ -82,7 +89,7 @@ export async function startVelora(browser, broadcast) {
 
       const html = msgNode.innerHTML || "";
 
-      // BADGES (Velora badges live in img elements before the username)
+      // BADGES
       const badges = [...last.querySelectorAll("img")]
         .map(img => img.src)
         .filter(src =>
@@ -90,7 +97,7 @@ export async function startVelora(browser, broadcast) {
           (src.includes("velora-badges") || src.includes("assets.velora.tv/badges"))
         );
 
-      // Send minimal payload; Node side will add avatar
+      // Send minimal payload — backend will add avatar
       window.relayVelora({
         platform: "velora",
         username,
