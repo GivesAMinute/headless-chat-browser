@@ -138,7 +138,7 @@
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
 
-    /* PLATFORM ICON (Beam included normally) */
+    /* PLATFORM ICON */
     const iconPath = getPlatformIcon(msg.platform);
     if (iconPath) {
       const iconHTML = `
@@ -154,14 +154,6 @@
 
     const content = document.createElement("div");
     content.className = "content";
-
-    /* INLINE AVATAR BEFORE USERNAME (safe version) */
-    if (msg.avatar && typeof msg.avatar === "string" && msg.avatar.startsWith("http")) {
-      const inlineAvatar = document.createElement("img");
-      inlineAvatar.className = "inline-avatar";
-      inlineAvatar.src = msg.avatar;
-      content.appendChild(inlineAvatar);
-    }
 
     /* Velora badges */
     if (msg.platform === "velora" && msg.badges?.length) {
