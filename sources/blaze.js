@@ -49,6 +49,21 @@ function transformBlazeMessage(msg) {
 
   const CHANNEL_OWNER_ID = process.env.BLAZE_OWNER_ID;
 
+  // ⭐ RESTORED BADGE URLS
+  const badges = [];
+
+  if (roles.includes("moderator"))
+    badges.push("https://cdn.blaze.stream/badges/mod.svg");
+
+  if (roles.includes("og"))
+    badges.push("https://cdn.blaze.stream/badges/og.svg");
+
+  if (roles.includes("vip"))
+    badges.push("https://cdn.blaze.stream/badges/vip.svg");
+
+  if (String(sender.id) === String(CHANNEL_OWNER_ID))
+    badges.push("https://cdn.blaze.stream/badges/streamer.svg");
+
   return {
     platform: "blaze",
     id: msg.id,
@@ -60,6 +75,8 @@ function transformBlazeMessage(msg) {
     isMod: roles.includes("moderator"),
     isOG: roles.includes("og"),
     isVIP: roles.includes("vip"),
+
+    badges,   // ⭐ ADDED BACK
 
     timestamp: msg.timestamp || msg.createdAt || Date.now()
   };
@@ -201,6 +218,21 @@ function startBlazeEventSub(broadcast) {
       const sender = payload.user || {};
       const roles = sender.roles || [];
 
+      // ⭐ RESTORE BADGES HERE TOO
+      const badges = [];
+
+      if (roles.includes("moderator"))
+        badges.push("https://cdn.blaze.stream/badges/mod.svg");
+
+      if (roles.includes("og"))
+        badges.push("https://cdn.blaze.stream/badges/og.svg");
+
+      if (roles.includes("vip"))
+        badges.push("https://cdn.blaze.stream/badges/vip.svg");
+
+      if (sender.isOwner === true)
+        badges.push("https://cdn.blaze.stream/badges/streamer.svg");
+
       broadcast({
         platform: "blaze",
         id: payload.id,
@@ -212,6 +244,8 @@ function startBlazeEventSub(broadcast) {
         isMod: roles.includes("moderator"),
         isOG: roles.includes("og"),
         isVIP: roles.includes("vip"),
+
+        badges,   // ⭐ ADDED BACK
 
         timestamp: payload.createdAt
       });
@@ -242,4 +276,3 @@ export function startBlaze(broadcast) {
   poller.start();
   startBlazeEventSub(broadcast);
 }
-
