@@ -44,6 +44,15 @@ body {
   vertical-align: middle;
   margin-right: 6px;
   display: inline-block;
+  object-fit: cover;
+}
+
+/* NEW: ensure avatar + badges + username align cleanly */
+.content {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .bubble {
@@ -64,6 +73,7 @@ body {
   font-weight: 600;
   margin-bottom: 4px;
   display: inline-block;
+  line-height: 1;
 }
 
 /* OG badge */

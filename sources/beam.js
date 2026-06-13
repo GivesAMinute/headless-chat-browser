@@ -26,11 +26,15 @@ export async function startBeam(browser, broadcast) {
         last.querySelector(".user-name")?.innerText?.trim() ||
         "Unknown";
 
-      /* AVATAR */
-      const avatar =
+      /* AVATAR (safe) */
+      let avatar =
         last.querySelector(".avatar img")?.src ||
         last.querySelector("img.avatar")?.src ||
         null;
+
+      if (!avatar || typeof avatar !== "string" || !avatar.startsWith("http")) {
+        avatar = null;
+      }
 
       /* BADGES */
       const badges = [...last.querySelectorAll(".badge img")].map(img => img.src);
@@ -64,13 +68,13 @@ export async function startBeam(browser, broadcast) {
           .join("");
       }
 
-      /* STICKERS (Beam uses <img class="sticker"> or <video>) */
+      /* STICKERS */
       const sticker = last.querySelector("img.sticker, video.sticker");
       const stickerHTML = sticker ? sticker.outerHTML : "";
 
       /* SEND NORMALIZED MESSAGE */
       window.relayBeam({
-        platform: "beam",   // ⭐ NORMALIZED — required for V3.2
+        platform: "beam",
         username,
         html: html + stickerHTML,
         avatar,
@@ -83,4 +87,3 @@ export async function startBeam(browser, broadcast) {
 
   console.log("Beam chat observer active.");
 }
-

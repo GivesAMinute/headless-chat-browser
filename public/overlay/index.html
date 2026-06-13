@@ -155,8 +155,8 @@
     const content = document.createElement("div");
     content.className = "content";
 
-    /* INLINE AVATAR BEFORE USERNAME */
-    if (msg.avatar) {
+    /* INLINE AVATAR BEFORE USERNAME (safe version) */
+    if (msg.avatar && typeof msg.avatar === "string" && msg.avatar.startsWith("http")) {
       const inlineAvatar = document.createElement("img");
       inlineAvatar.className = "inline-avatar";
       inlineAvatar.src = msg.avatar;

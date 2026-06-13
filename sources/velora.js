@@ -1,57 +1,82 @@
 // sources/velora.js
 
-export async function startVeloraChat(browser, broadcast) {
-  console.log("Starting Velora chat scraper…");
+export async function startVelora(browser, broadcast) {
+  console.log("Starting Velora scraper…");
 
-  const veloraPage = await browser.newPage();
+  const page = await browser.newPage();
 
-  await veloraPage.goto(
-    "https://velora.tv/dashboard/stream/popout?panels=chat%2Cactivity&channel=GivesAMinute&layout=vertical",
+  await page.goto(
+    "https://velora.live/givesaminute/chat",
     { waitUntil: "networkidle2" }
   );
 
-  // Bridge messages back to Node
-  await veloraPage.exposeFunction("relayVelora", (msg) => {
+  await page.exposeFunction("relayVelora", (msg) => {
     broadcast(msg);
   });
 
-  await veloraPage.evaluate(() => {
+  await page.evaluate(() => {
     const observer = new MutationObserver(() => {
-      const nodes = [...document.querySelectorAll(".chat-message-content")];
+      const nodes = [...document.querySelectorAll(".chat-message")];
       const last = nodes[nodes.length - 1];
       if (!last) return;
 
-      // Username wrapper
-      const wrapperSpan = last.querySelector("span.inline.leading-relaxed.text-sm");
-      if (!wrapperSpan) return;
+      /* USERNAME */
+      const username =
+        last.querySelector(".username")?.innerText?.trim() ||
+        "Unknown";
 
-      // Username
-      const button = wrapperSpan.querySelector("button");
-      const username = (button?.innerText || "").replace(":", "").trim();
-      if (!username) return;
+      /* AVATAR (safe + async friendly) */
+      let avatar =
+        last.querySelector(".avatar img")?.src ||
+        last.querySelector("img.avatar")?.src ||
+        null;
 
-      // Message HTML
-      const messageSpan =
-        wrapperSpan.querySelector("span.break-words") ||
-        wrapperSpan.querySelector("span.text-white\\/90.break-words") ||
-        wrapperSpan.querySelector("span.text-white\\/90");
+      if (!avatar || typeof avatar !== "string" || !avatar.startsWith("http")) {
+        avatar = null;
+      }
 
-      const html = messageSpan?.innerHTML || "";
+      /* BADGES */
+      const badges = [...last.querySelectorAll(".badge img")].map(img => img.src);
 
-      // ⭐ BADGE FIX — remove internal Velora base assets
-      const badges = [
-        ...wrapperSpan.querySelectorAll('img[src*="velora-badges"]'),
-        ...wrapperSpan.querySelectorAll('img[src*="assets.velora.tv/badges"]')
-      ]
-        .map(img => img.src)
-        .filter(src => !src.includes("/base/"));   // ⬅️ remove internal UUID badges
+      /* MESSAGE HTML */
+      const container =
+        last.querySelector(".message") ||
+        last.querySelector(".msg-body") ||
+        last;
 
-      // Send normalized Velora message
+      let html = "";
+      if (container) {
+        const parts = [
+          ...container.querySelectorAll(".text-fragment, .chat-image, img, video")
+        ];
+
+        html = parts
+          .map(el => {
+            if (el.tagName === "IMG") {
+              const alt = (el.getAttribute("alt") || "").trim();
+              if (!alt) return "";
+              return el.outerHTML;
+            }
+
+            if (el.tagName === "VIDEO") {
+              return el.outerHTML;
+            }
+
+            return el.outerHTML || el.textContent || "";
+          })
+          .join("");
+      }
+
+      /* STICKERS */
+      const sticker = last.querySelector("img.sticker, video.sticker");
+      const stickerHTML = sticker ? sticker.outerHTML : "";
+
+      /* SEND NORMALIZED MESSAGE */
       window.relayVelora({
         platform: "velora",
         username,
-        html,
-        avatar: null,
+        html: html + stickerHTML,
+        avatar,
         badges
       });
     });
