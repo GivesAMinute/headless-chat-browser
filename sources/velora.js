@@ -15,7 +15,7 @@ export async function startVelora(browser, broadcast) {
   async function fetchVeloraAvatar(username) {
     if (!username) return null;
 
-    if (avatarCache[username]) {
+    if (Object.prototype.hasOwnProperty.call(avatarCache, username)) {
       return avatarCache[username];
     }
 
@@ -58,35 +58,40 @@ export async function startVelora(browser, broadcast) {
     broadcast(enriched);
   });
 
-  // Correct Velora DOM observer
+  // Optimized Velora DOM observer: only process newly added .msg nodes
   await page.evaluate(() => {
-    const observer = new MutationObserver(() => {
-      const nodes = [...document.querySelectorAll(".msg")];
-      const last = nodes[nodes.length - 1];
-      if (!last) return;
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const node of m.addedNodes) {
+          if (!(node instanceof HTMLElement)) continue;
 
-      // USERNAME
-      const usernameEl = last.querySelector(".username");
-      const username = usernameEl ? usernameEl.innerText.trim() : null;
+          // Only handle actual chat message containers
+          if (!node.classList.contains("msg")) continue;
 
-      // MESSAGE HTML
-      const textEl = last.querySelector(".text");
-      const html = textEl ? textEl.innerHTML : "";
+          // USERNAME
+          const usernameEl = node.querySelector(".username");
+          const username = usernameEl ? usernameEl.innerText.trim() : null;
 
-      // BADGES
-      const badges = [...last.querySelectorAll("img")]
-        .map(img => img.src)
-        .filter(src =>
-          src.includes("velora-badges") ||
-          src.includes("assets.velora.tv/badges")
-        );
+          // MESSAGE HTML
+          const textEl = node.querySelector(".text");
+          const html = textEl ? textEl.innerHTML : "";
 
-      window.relayVelora({
-        platform: "velora",
-        username,
-        html,
-        badges
-      });
+          // BADGES
+          const badges = [...node.querySelectorAll("img")]
+            .map(img => img.src)
+            .filter(src =>
+              src.includes("velora-badges") ||
+              src.includes("assets.velora.tv/badges")
+            );
+
+          window.relayVelora({
+            platform: "velora",
+            username,
+            html,
+            badges
+          });
+        }
+      }
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
