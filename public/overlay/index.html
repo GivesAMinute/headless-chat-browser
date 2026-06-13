@@ -132,28 +132,39 @@
   <span class="tooltip-bubble">Streamer</span>
 </span>`;
 
-  // Velora avatar fallback
+  /* ⭐ NEW: Velora avatar cache */
+  const veloraAvatarCache = new Map();
+
   async function ensureVeloraAvatar(msg) {
     if (msg.platform !== "velora") return msg;
-    if (msg.avatar && typeof msg.avatar === "string" && msg.avatar.startsWith("http")) {
-      return msg;
-    }
     if (!msg.username) return msg;
 
+    // Cached avatar → instant
+    if (veloraAvatarCache.has(msg.username)) {
+      msg.avatar = veloraAvatarCache.get(msg.username);
+      return msg;
+    }
+
+    // If avatar already provided, cache it
+    if (msg.avatar && msg.avatar.startsWith("http")) {
+      veloraAvatarCache.set(msg.username, msg.avatar);
+      return msg;
+    }
+
+    // Fetch once
     try {
       const res = await fetch(
-        `https://velora.tv/api/users/${encodeURIComponent(msg.username)}`,
-        { method: "GET" }
+        `https://velora.tv/api/users/${encodeURIComponent(msg.username)}`
       );
       if (!res.ok) return msg;
 
       const data = await res.json();
-      if (data && typeof data.avatarUrl === "string" && data.avatarUrl.startsWith("http")) {
+      if (data?.avatarUrl?.startsWith("http")) {
+        veloraAvatarCache.set(msg.username, data.avatarUrl);
         msg.avatar = data.avatarUrl;
       }
-    } catch (e) {
-      console.warn("Velora avatar fetch failed in overlay:", e);
-    }
+    } catch {}
+
     return msg;
   }
 
@@ -207,7 +218,7 @@
       });
     }
 
-    /* ⭐ Blaze role icons — EXACT pre‑V3 behavior */
+    /* Blaze role icons */
     if (msg.platform === "blaze") {
       if (msg.isMod)      content.insertAdjacentHTML("beforeend", MOD_SVG);
       if (msg.isOG)       content.insertAdjacentHTML("beforeend", OG_SVG);
