@@ -123,6 +123,11 @@
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
 
+    // ADD PLATFORM CLASS
+    if (msg.platform) {
+      wrapper.classList.add(`platform-${msg.platform.toLowerCase()}`);
+    }
+
     /* PLATFORM ICON */
     const iconPath = getPlatformIcon(msg.platform);
     if (iconPath) {
@@ -196,7 +201,7 @@
 
     /* MESSAGE TEXT */
     const text = document.createElement("div");
-    text.className = "text"; /* indent */
+    text.className = "text";
     text.innerHTML = msg.html;
 
     text.querySelectorAll("img").forEach(img => {
