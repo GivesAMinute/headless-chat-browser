@@ -16,14 +16,9 @@ export async function startBeam(browser, broadcast) {
 
   await page.evaluate(() => {
 
-    /* ---------- SAFE HELPERS ---------- */
-
     const safe = (el, selector) => {
-      try {
-        return el.querySelector(selector) || null;
-      } catch {
-        return null;
-      }
+      try { return el.querySelector(selector) || null; }
+      catch { return null; }
     };
 
     const safeText = (el, selector, fallback = "") => {
@@ -37,47 +32,35 @@ export async function startBeam(browser, broadcast) {
       return (typeof src === "string" && src.startsWith("http")) ? src : null;
     };
 
-    /* ---------- OBSERVER ---------- */
-
     const observer = new MutationObserver(() => {
-      const nodes = [...document.querySelectorAll(".chat-message")];
+      const nodes = [...document.querySelectorAll('[typeof="ChatMessage"]')];
       const last = nodes[nodes.length - 1];
       if (!last) return;
 
-      /* ---------- USERNAME ---------- */
+      /* USERNAME */
       const username =
+        safeText(last, '[property="sender.name"]') ||
         safeText(last, ".username") ||
-        safeText(last, ".user-name") ||
         "Unknown";
 
-      /* ---------- AVATAR (bulletproof) ---------- */
-      let avatar = null;
+      /* AVATAR — CORRECT BEAM SELECTOR */
+      let avatar =
+        safeSrc(last, 'img[property="avatar"]') ||   // Beam's real avatar
+        safeSrc(last, ".avatar img") ||
+        safeSrc(last, "img.avatar") ||
+        safeSrc(last, "img.user-avatar") ||
+        safeSrc(last, "img[src*='avatar']") ||
+        safeSrc(last, "img[src*='profile']") ||
+        null;
 
-      const avatarSelectors = [
-        ".avatar img",
-        "img.avatar",
-        "img.user-avatar",
-        "img[src*='profile']",
-        "img[src*='avatar']"
-      ];
-
-      for (const sel of avatarSelectors) {
-        const found = safeSrc(last, sel);
-        if (found) {
-          avatar = found;
-          break;
-        }
-      }
-
-      if (!avatar) avatar = null;
-
-      /* ---------- BADGES ---------- */
+      /* BADGES */
       const badges = [...last.querySelectorAll(".badge img")]
         .map(img => img.src)
         .filter(src => typeof src === "string");
 
-      /* ---------- MESSAGE HTML ---------- */
+      /* MESSAGE HTML */
       const container =
+        safe(last, '[property="body"]') ||
         safe(last, ".message") ||
         safe(last, ".msg-body") ||
         last;
@@ -103,11 +86,11 @@ export async function startBeam(browser, broadcast) {
         html = container?.innerText || "";
       }
 
-      /* ---------- STICKERS ---------- */
+      /* STICKERS */
       const sticker = safe(last, "img.sticker, video.sticker");
       const stickerHTML = sticker ? sticker.outerHTML : "";
 
-      /* ---------- SEND MESSAGE ---------- */
+      /* SEND MESSAGE */
       window.relayBeam({
         platform: "beam",
         username,
