@@ -5,77 +5,81 @@ export async function startVelora(browser, broadcast) {
 
   const page = await browser.newPage();
 
-  await page.goto(
-    "https://velora.live/givesaminute/chat",
-    { waitUntil: "networkidle2" }
-  );
+  await page.goto("https://velora.tv/givesaminute/chat", {
+    waitUntil: "networkidle2"
+  });
 
   await page.exposeFunction("relayVelora", (msg) => {
     broadcast(msg);
   });
 
+  // Avatar cache to avoid repeated profile fetches
+  const avatarCache = {};
+
+  await page.exposeFunction("fetchVeloraAvatar", async (username) => {
+    if (avatarCache[username]) {
+      return avatarCache[username];
+    }
+
+    try {
+      const profileURL = `https://velora.tv/${username}`;
+      const profilePage = await browser.newPage();
+      await profilePage.goto(profileURL, { waitUntil: "domcontentloaded" });
+
+      const avatarURL = await profilePage.evaluate(() => {
+        const img = document.querySelector("img.rounded-full");
+        return img?.src || null;
+      });
+
+      await profilePage.close();
+
+      if (avatarURL) {
+        avatarCache[username] = avatarURL;
+        return avatarURL;
+      }
+    } catch (err) {
+      console.error("Velora avatar fetch failed:", err);
+    }
+
+    return null;
+  });
+
   await page.evaluate(() => {
-    const observer = new MutationObserver(() => {
-      const nodes = [...document.querySelectorAll(".chat-message")];
+    const safe = (el, selector) => {
+      try { return el.querySelector(selector) || null; }
+      catch { return null; }
+    };
+
+    const safeText = (el, selector, fallback = "") => {
+      const node = safe(el, selector);
+      return node?.innerText?.trim() || fallback;
+    };
+
+    const observer = new MutationObserver(async () => {
+      const nodes = [...document.querySelectorAll(".chat-message-content")];
       const last = nodes[nodes.length - 1];
       if (!last) return;
 
-      /* USERNAME */
-      const username =
-        last.querySelector(".username")?.innerText?.trim() ||
-        "Unknown";
+      // USERNAME (Velora uses a <button> element)
+      let username = safeText(last, "button");
+      username = username.replace(":", "").trim();
 
-      /* AVATAR (safe + async friendly) */
-      let avatar =
-        last.querySelector(".avatar img")?.src ||
-        last.querySelector("img.avatar")?.src ||
-        null;
+      // MESSAGE TEXT
+      const msgText = safe(last, ".text-white\\/90") || last;
+      const html = msgText.innerHTML || "";
 
-      if (!avatar || typeof avatar !== "string" || !avatar.startsWith("http")) {
-        avatar = null;
-      }
+      // BADGES
+      const badges = [...last.querySelectorAll("img")]
+        .map(img => img.src)
+        .filter(src => src.includes("velora-badges") || src.includes("assets.velora.tv/badges"));
 
-      /* BADGES */
-      const badges = [...last.querySelectorAll(".badge img")].map(img => img.src);
+      // FETCH AVATAR
+      const avatar = await window.fetchVeloraAvatar(username);
 
-      /* MESSAGE HTML */
-      const container =
-        last.querySelector(".message") ||
-        last.querySelector(".msg-body") ||
-        last;
-
-      let html = "";
-      if (container) {
-        const parts = [
-          ...container.querySelectorAll(".text-fragment, .chat-image, img, video")
-        ];
-
-        html = parts
-          .map(el => {
-            if (el.tagName === "IMG") {
-              const alt = (el.getAttribute("alt") || "").trim();
-              if (!alt) return "";
-              return el.outerHTML;
-            }
-
-            if (el.tagName === "VIDEO") {
-              return el.outerHTML;
-            }
-
-            return el.outerHTML || el.textContent || "";
-          })
-          .join("");
-      }
-
-      /* STICKERS */
-      const sticker = last.querySelector("img.sticker, video.sticker");
-      const stickerHTML = sticker ? sticker.outerHTML : "";
-
-      /* SEND NORMALIZED MESSAGE */
       window.relayVelora({
         platform: "velora",
         username,
-        html: html + stickerHTML,
+        html,
         avatar,
         badges
       });
