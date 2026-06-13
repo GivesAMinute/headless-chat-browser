@@ -132,26 +132,24 @@
   <span class="tooltip-bubble">Streamer</span>
 </span>`;
 
-  /* ⭐ NEW: Velora avatar cache */
+  /* ⭐ NEW: Velora avatar + badge caches */
   const veloraAvatarCache = new Map();
+  const veloraBadgeCache = new Map();
 
   async function ensureVeloraAvatar(msg) {
     if (msg.platform !== "velora") return msg;
     if (!msg.username) return msg;
 
-    // Cached avatar → instant
     if (veloraAvatarCache.has(msg.username)) {
       msg.avatar = veloraAvatarCache.get(msg.username);
       return msg;
     }
 
-    // If avatar already provided, cache it
     if (msg.avatar && msg.avatar.startsWith("http")) {
       veloraAvatarCache.set(msg.username, msg.avatar);
       return msg;
     }
 
-    // Fetch once
     try {
       const res = await fetch(
         `https://velora.tv/api/users/${encodeURIComponent(msg.username)}`
@@ -166,6 +164,18 @@
     } catch {}
 
     return msg;
+  }
+
+  /* ⭐ NEW: Preload Velora badge images */
+  function getCachedVeloraBadge(src) {
+    if (veloraBadgeCache.has(src)) {
+      return veloraBadgeCache.get(src);
+    }
+
+    const img = new Image();
+    img.src = src;
+    veloraBadgeCache.set(src, img);
+    return img;
   }
 
   ws.onmessage = async (event) => {
@@ -205,9 +215,11 @@
       content.appendChild(inlineAvatar);
     }
 
-    /* Velora badges */
+    /* ⭐ Velora badges (cached) */
     if (msg.platform === "velora" && msg.badges?.length) {
       msg.badges.forEach(src => {
+        getCachedVeloraBadge(src); // preload
+
         const label = src.split("/").pop().replace(/\.(png|svg)/, "");
         content.insertAdjacentHTML("beforeend", `
           <span class="tooltip-wrapper">
