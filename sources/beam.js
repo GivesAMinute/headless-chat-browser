@@ -1,3 +1,5 @@
+// sources/beam.js
+
 export async function startBeam(browser, broadcast) {
   console.log("Starting Beam scraper…");
 
@@ -13,12 +15,14 @@ export async function startBeam(browser, broadcast) {
   });
 
   await page.evaluate(() => {
-    const safe = (el, selector, fallback = null) => {
+
+    /* ---------- SAFE HELPERS ---------- */
+
+    const safe = (el, selector) => {
       try {
-        const found = el.querySelector(selector);
-        return found ? found : fallback;
+        return el.querySelector(selector) || null;
       } catch {
-        return fallback;
+        return null;
       }
     };
 
@@ -30,25 +34,49 @@ export async function startBeam(browser, broadcast) {
     const safeSrc = (el, selector) => {
       const node = safe(el, selector);
       const src = node?.src || null;
-      return typeof src === "string" && src.startsWith("http") ? src : null;
+      return (typeof src === "string" && src.startsWith("http")) ? src : null;
     };
+
+    /* ---------- OBSERVER ---------- */
 
     const observer = new MutationObserver(() => {
       const nodes = [...document.querySelectorAll(".chat-message")];
       const last = nodes[nodes.length - 1];
       if (!last) return;
 
-      const username = safeText(last, ".username", "Unknown");
+      /* ---------- USERNAME ---------- */
+      const username =
+        safeText(last, ".username") ||
+        safeText(last, ".user-name") ||
+        "Unknown";
 
-      const avatar =
-        safeSrc(last, ".avatar img") ||
-        safeSrc(last, "img.avatar") ||
-        null;
+      /* ---------- AVATAR (bulletproof) ---------- */
+      let avatar = null;
 
+      const avatarSelectors = [
+        ".avatar img",
+        "img.avatar",
+        "img.user-avatar",
+        "img[src*='profile']",
+        "img[src*='avatar']"
+      ];
+
+      for (const sel of avatarSelectors) {
+        const found = safeSrc(last, sel);
+        if (found) {
+          avatar = found;
+          break;
+        }
+      }
+
+      if (!avatar) avatar = null;
+
+      /* ---------- BADGES ---------- */
       const badges = [...last.querySelectorAll(".badge img")]
         .map(img => img.src)
         .filter(src => typeof src === "string");
 
+      /* ---------- MESSAGE HTML ---------- */
       const container =
         safe(last, ".message") ||
         safe(last, ".msg-body") ||
@@ -75,9 +103,11 @@ export async function startBeam(browser, broadcast) {
         html = container?.innerText || "";
       }
 
+      /* ---------- STICKERS ---------- */
       const sticker = safe(last, "img.sticker, video.sticker");
       const stickerHTML = sticker ? sticker.outerHTML : "";
 
+      /* ---------- SEND MESSAGE ---------- */
       window.relayBeam({
         platform: "beam",
         username,
