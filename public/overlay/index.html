@@ -121,7 +121,11 @@
     msg = await ensureVeloraAvatar(msg);
 
     const wrapper = document.createElement("div");
-    wrapper.className = "msg";
+wrapper.className = "msg";
+if (msg.platform) {
+  wrapper.classList.add(`platform-${msg.platform.toLowerCase()}`);
+}
+
 
     // ADD PLATFORM CLASS
     if (msg.platform) {

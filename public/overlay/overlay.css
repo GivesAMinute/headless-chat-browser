@@ -217,13 +217,38 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-
 /* ============================================================
-   ⭐ VELORA‑ONLY ALIGNMENT FIX (SAFE, NON‑BREAKING)
+   VELORA-ONLY: align text under username using a small grid
    ============================================================ */
 
-.msg.platform-velora .text {
-  padding-left: 0;          /* remove universal indent */
-  margin-left: 32px;        /* indent under username */
-  display: block;
+.msg.platform-velora .bubble .content {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 6px;
+  align-items: center;
 }
+
+/* Avatar: left column, spans both rows */
+.msg.platform-velora .inline-avatar {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  margin-right: 0; /* grid handles spacing */
+}
+
+/* Badges + username: top row, right column */
+.msg.platform-velora .velora-inline-badge,
+.msg.platform-velora .tooltip-wrapper,
+.msg.platform-velora .username {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+/* Message text: second row, right column, no extra padding */
+.msg.platform-velora .text {
+  grid-column: 2;
+  grid-row: 2;
+  padding-left: 0;   /* override global 32px */
+  margin-left: 0;
+}
+
