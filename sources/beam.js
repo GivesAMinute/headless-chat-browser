@@ -1,5 +1,3 @@
-// sources/beam.js
-
 export async function startBeam(browser, broadcast) {
   console.log("Starting Beam scraper…");
 
@@ -15,38 +13,49 @@ export async function startBeam(browser, broadcast) {
   });
 
   await page.evaluate(() => {
+    const safe = (el, selector, fallback = null) => {
+      try {
+        const found = el.querySelector(selector);
+        return found ? found : fallback;
+      } catch {
+        return fallback;
+      }
+    };
+
+    const safeText = (el, selector, fallback = "") => {
+      const node = safe(el, selector);
+      return node?.innerText?.trim() || fallback;
+    };
+
+    const safeSrc = (el, selector) => {
+      const node = safe(el, selector);
+      const src = node?.src || null;
+      return typeof src === "string" && src.startsWith("http") ? src : null;
+    };
+
     const observer = new MutationObserver(() => {
       const nodes = [...document.querySelectorAll(".chat-message")];
       const last = nodes[nodes.length - 1];
       if (!last) return;
 
-      /* USERNAME */
-      const username =
-        last.querySelector(".username")?.innerText?.trim() ||
-        last.querySelector(".user-name")?.innerText?.trim() ||
-        "Unknown";
+      const username = safeText(last, ".username", "Unknown");
 
-      /* AVATAR (safe) */
-      let avatar =
-        last.querySelector(".avatar img")?.src ||
-        last.querySelector("img.avatar")?.src ||
+      const avatar =
+        safeSrc(last, ".avatar img") ||
+        safeSrc(last, "img.avatar") ||
         null;
 
-      if (!avatar || typeof avatar !== "string" || !avatar.startsWith("http")) {
-        avatar = null;
-      }
+      const badges = [...last.querySelectorAll(".badge img")]
+        .map(img => img.src)
+        .filter(src => typeof src === "string");
 
-      /* BADGES */
-      const badges = [...last.querySelectorAll(".badge img")].map(img => img.src);
-
-      /* MESSAGE HTML */
       const container =
-        last.querySelector(".message") ||
-        last.querySelector(".msg-body") ||
+        safe(last, ".message") ||
+        safe(last, ".msg-body") ||
         last;
 
       let html = "";
-      if (container) {
+      try {
         const parts = [
           ...container.querySelectorAll(".text-fragment, .chat-image, img, video")
         ];
@@ -58,21 +67,17 @@ export async function startBeam(browser, broadcast) {
               if (!alt) return "";
               return el.outerHTML;
             }
-
-            if (el.tagName === "VIDEO") {
-              return el.outerHTML;
-            }
-
+            if (el.tagName === "VIDEO") return el.outerHTML;
             return el.outerHTML || el.textContent || "";
           })
           .join("");
+      } catch {
+        html = container?.innerText || "";
       }
 
-      /* STICKERS */
-      const sticker = last.querySelector("img.sticker, video.sticker");
+      const sticker = safe(last, "img.sticker, video.sticker");
       const stickerHTML = sticker ? sticker.outerHTML : "";
 
-      /* SEND NORMALIZED MESSAGE */
       window.relayBeam({
         platform: "beam",
         username,
