@@ -36,6 +36,17 @@ body {
   flex-shrink: 0;
 }
 
+/* NEW — inline avatar inside bubble */
+.inline-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-right: 6px;
+  display: inline-block;
+  object-fit: cover;
+}
+
 .bubble {
   background: rgba(0,0,0,0.85);
   color: white;
@@ -54,6 +65,7 @@ body {
   font-weight: 600;
   margin-bottom: 4px;
   display: inline-block;
+  line-height: 1;
 }
 
 /* OG badge */
