@@ -43,12 +43,11 @@ export async function startVelora(browser, broadcast) {
 
   // Expose a relay that enriches messages with avatar before broadcasting
   await page.exposeFunction("relayVelora", async (msg) => {
-    try {
-      const avatar = await fetchVeloraAvatar(msg.username);
-      broadcast({
-        ...msg,
-        avatar
-      });
+  console.log("VELORA DEBUG:", msg);   // <— ADD THIS
+  const avatar = await fetchVeloraAvatar(msg.username);
+  broadcast({ ...msg, avatar });
+});
+
     } catch (err) {
       console.error("relayVelora error:", err);
       broadcast(msg);
