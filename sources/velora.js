@@ -3,7 +3,7 @@
 // - Chat via Socket.IO (/chat namespace)
 // - Rewards via events + HTML fetch
 // - Avatar enrichment
-// - Badge caching
+// - Badge passthrough
 // - Emote-safe HTML passthrough
 // - Message type tagging + debug logging
 
@@ -20,9 +20,6 @@ const VELORA_CHANNEL_ID =
 
 // Avatar cache
 const avatarCache = Object.create(null);
-
-// Badge cache
-const badgeCache = Object.create(null);
 
 export function startVelora(broadcast) {
   console.log("Starting Velora Socket.IO ingestion…");
@@ -60,48 +57,15 @@ async function fetchVeloraAvatar(username) {
   }
 }
 
-// Normalize badges from payload into icon URLs
-function normalizeVeloraBadges(badgesRaw) {
-  if (!Array.isArray(badgesRaw)) return [];
-
-  return badgesRaw
-    .map((b) => {
-      if (!b) return null;
-
-      const key = b.id || b.icon || JSON.stringify(b);
-
-      if (badgeCache[key]) return badgeCache[key];
-
-      const icon = b.icon || null;
-      if (!icon) return null;
-
-      badgeCache[key] = icon;
-      return icon;
-    })
-    .filter(Boolean);
-}
-
-// Map message type
-function mapVeloraMessageType(data) {
-  if (!data) return "chat";
-  if (data.is_action) return "action";
-  if (data.is_system) return "system";
-  return "chat";
-}
-
 // MAIN SOCKET.IO HANDLER
 function startVeloraSocketIO(broadcast) {
-  if (!VELORA_TOKEN || VELORA_TOKEN.includes("PASTE_YOUR")) {
-    console.error(
-      "[Velora] VELORA_TOKEN is not set. Set it in env or in sources/velora.js."
-    );
+  if (!VELORA_TOKEN || VELORA_TOKEN.includes("PASTE_")) {
+    console.error("[Velora] ERROR: VELORA_TOKEN is not set.");
     return;
   }
 
-  if (!VELORA_CHANNEL_ID || VELORA_CHANNEL_ID.includes("PASTE_YOUR")) {
-    console.error(
-      "[Velora] VELORA_CHANNEL_ID is not set. Set it in env or in sources/velora.js."
-    );
+  if (!VELORA_CHANNEL_ID || VELORA_CHANNEL_ID.includes("PASTE_")) {
+    console.error("[Velora] ERROR: VELORA_CHANNEL_ID is not set.");
     return;
   }
 
@@ -118,16 +82,15 @@ function startVeloraSocketIO(broadcast) {
   chatSocket.on("connect", () => {
     console.log("[Velora] Socket.IO connected. id:", chatSocket.id);
 
-    // Join your channel
     console.log("[Velora] Joining channel:", VELORA_CHANNEL_ID);
     chatSocket.emit("joinChannel", {
       channelId: VELORA_CHANNEL_ID,
     });
 
-    // Optional: fetch pinned message, raid status, etc.
     chatSocket.emit("getPinnedMessage", {
       channelId: VELORA_CHANNEL_ID,
     });
+
     chatSocket.emit("getRaidSessionStatus", {
       channelId: VELORA_CHANNEL_ID,
     });
@@ -141,21 +104,17 @@ function startVeloraSocketIO(broadcast) {
     console.warn("[Velora] Socket.IO disconnected:", reason);
   });
 
-  // DEBUG: log everything so we can see real event names
+  // DEBUG: log everything
   chatSocket.onAny((event, payload) => {
     console.log("[Velora] EVENT:", event, JSON.stringify(payload));
 
-    // Handle chat messages (best-guess event names)
-    if (
-      event === "message" ||
-      event === "chatMessage" ||
-      event === "messageCreated"
-    ) {
+    // ⭐ REAL CHAT EVENT
+    if (event === "newMessage") {
       handleVeloraChatEvent(payload, broadcast);
       return;
     }
 
-    // Handle reward redemptions (best-guess event names)
+    // Possible reward events
     if (
       event === "rewardRedeemed" ||
       event === "channelPointRedeemed" ||
@@ -171,23 +130,23 @@ function startVeloraSocketIO(broadcast) {
 async function handleVeloraChatEvent(payload, broadcast) {
   if (!payload) return;
 
-  // Shape here is inferred; adjust once you see real logs
-  const data = payload.data || payload;
+  const data = payload;
 
   const username =
-    data.username || data.displayName || data.user?.username || null;
+    data.username ||
+    data.displayName ||
+    data.user?.username ||
+    null;
 
-  // Velora usually has HTML with emotes
+  // Velora uses plain text "message"
   const html =
     data.message_html ||
     data.html ||
-    data.message ||
-    data.text ||
+    data.message || // ⭐ real field
     "";
 
-  const badges = normalizeVeloraBadges(data.badges || data.userBadges || []);
-
-  const messageType = mapVeloraMessageType(data);
+  // Badges are simple strings like ["broadcaster","subscriber"]
+  const badges = Array.isArray(data.badges) ? data.badges : [];
 
   const avatar =
     data.avatarUrl ||
@@ -200,7 +159,7 @@ async function handleVeloraChatEvent(payload, broadcast) {
     html,
     badges,
     avatar,
-    messageType,
+    messageType: "chat",
   };
 
   console.log("[Velora] CHAT OUT:", out);
