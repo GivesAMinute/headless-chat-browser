@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 
 import { startYouTube } from "./sources/youtube.js";
 import { startBlaze } from "./sources/blaze.js";
+import { startVelora } from "./sources/velora.js";   // ⭐ NEW — WebSocket-only Velora
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,7 +15,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 8080;
 
-// Static assets (UPDATED for current structure)
+// Static assets
 app.use("/icons", express.static(path.join(__dirname, "public/icons")));
 app.use("/badges", express.static(path.join(__dirname, "badges")));
 app.use("/utils", express.static(path.join(__dirname, "utils")));
@@ -34,7 +35,7 @@ function broadcast(msg) {
 }
 
 /* ---------------------------------------------------------
-   BEAM CHAT SCRAPER
+   BEAM CHAT SCRAPER (unchanged)
 --------------------------------------------------------- */
 async function startBeamChat() {
   console.log("Launching headless browser…");
@@ -133,7 +134,7 @@ async function startBeamChat() {
 }
 
 /* ---------------------------------------------------------
-   TWITCH CHAT SCRAPER
+   TWITCH CHAT SCRAPER (unchanged)
 --------------------------------------------------------- */
 async function startTwitchChat() {
   console.log("Starting Twitch chat scraper…");
@@ -240,98 +241,14 @@ async function startTwitchChat() {
 }
 
 /* ---------------------------------------------------------
-   VELORA CHAT SCRAPER
+   ⭐ REMOVED: Velora DOM SCRAPER
+   (startVeloraChat was here — now deleted)
 --------------------------------------------------------- */
-async function startVeloraChat() {
-  console.log("Starting Velora chat scraper…");
-
-  const veloraPage = await browser.newPage();
-
-  await veloraPage.goto(
-    "https://velora.tv/dashboard/stream/popout?panels=chat%2Cactivity&channel=GivesAMinute&layout=vertical",
-    { waitUntil: "networkidle2" }
-  );
-
-  // Enrich Velora messages with avatar before broadcasting
-  await veloraPage.exposeFunction("relayVelora", async (msg) => {
-    try {
-      let avatar = null;
-
-      if (msg.username) {
-        try {
-          const res = await fetch(
-            `https://velora.tv/api/users/${encodeURIComponent(msg.username)}`
-          );
-          if (res.ok) {
-            const data = await res.json();
-            if (data && typeof data.avatarUrl === "string") {
-              avatar = data.avatarUrl;
-            }
-          } else {
-            console.warn("Velora avatar API non-OK:", res.status, msg.username);
-          }
-        } catch (e) {
-          console.error("Velora avatar fetch failed:", e);
-        }
-      }
-
-      const enriched = {
-        ...msg,
-        avatar
-      };
-
-      console.log("VELORA OUT:", enriched);
-      broadcast(enriched);
-    } catch (e) {
-      console.error("relayVelora error:", e);
-      broadcast(msg);
-    }
-  });
-
-  await veloraPage.evaluate(() => {
-    const observer = new MutationObserver(() => {
-      const nodes = [...document.querySelectorAll(".chat-message-content")];
-      const last = nodes[nodes.length - 1];
-      if (!last) return;
-
-      const wrapperSpan = last.querySelector("span.inline.leading-relaxed.text-sm");
-      if (!wrapperSpan) return;
-
-      const button = wrapperSpan.querySelector("button");
-      const username = (button?.innerText || "").replace(":", "").trim();
-      if (!username) return;
-
-      const messageSpan =
-        wrapperSpan.querySelector("span.break-words") ||
-        wrapperSpan.querySelector("span.text-white\\/90.break-words") ||
-        wrapperSpan.querySelector("span.text-white\\/90");
-
-      const html = messageSpan?.innerHTML || "";
-
-      const badges = [
-        ...wrapperSpan.querySelectorAll('img[src*="velora-badges"]'),
-        ...wrapperSpan.querySelectorAll('img[src*="assets.velora.tv/badges"]')
-      ].map(img => img.src);
-
-      window.relayVelora({
-        platform: "velora",
-        username,
-        html,
-        badges
-      });
-    });
-
-    observer.observe(document.body, { childList: true, subtree: true });
-  });
-
-  console.log("Velora chat observer active.");
-}
 
 /* ---------------------------------------------------------
    EXPRESS + SERVER
 --------------------------------------------------------- */
 
-// UPDATED: serve new overlay location
 app.get("/overlay", (_req, res) => {
   res.sendFile(path.join(__dirname, "public/overlay/index.html"));
 });
@@ -349,13 +266,16 @@ const server = app.listen(port, () => {
   startBeamChat()
     .then(() => {
       return Promise.all([
-        startTwitchChat(),
-        startVeloraChat()
+        startTwitchChat()
+        // ⭐ Velora DOM scraper removed
       ]);
     })
     .catch((err) => console.error("Startup error:", err));
 
-  // These were already split out and working
+  // ⭐ NEW — WebSocket-only Velora
+  startVelora(broadcast);
+
+  // Other platforms
   startYouTube(broadcast);
   startBlaze(broadcast);
 });
