@@ -133,7 +133,6 @@
 
   /* Velora caches */
   const veloraAvatarCache = new Map();
-  const veloraBadgeCache = new Map();
 
   async function ensureVeloraAvatar(msg) {
     if (msg.platform !== "velora") return msg;
@@ -163,17 +162,6 @@
     } catch {}
 
     return msg;
-  }
-
-  function getCachedVeloraBadge(src) {
-    if (veloraBadgeCache.has(src)) {
-      return veloraBadgeCache.get(src);
-    }
-
-    const img = new Image();
-    img.src = src;
-    veloraBadgeCache.set(src, img);
-    return img;
   }
 
   /* ⭐ NEW — INLINE REWARD CARD RENDERER */
