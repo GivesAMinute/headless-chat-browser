@@ -315,7 +315,10 @@ function startVeloraSocketIO(broadcast) {
     console.warn("[Velora] disconnected:", reason);
   });
 
+  // ⭐ ADDED: LOG EVERY EVENT NAME
   chatSocket.onAny((event, payload) => {
+    console.log("[Velora] SOCKET EVENT:", event, payload);
+
     if (event === "newMessage") {
       handleVeloraChatEvent(payload, broadcast);
       return;
@@ -383,12 +386,11 @@ async function handleVeloraChatEvent(payload, broadcast) {
 }
 
 // ------------------------------------------------------------
-// ⭐ Reward event (with debug logs added)
+// Reward event
 // ------------------------------------------------------------
 async function handleVeloraRewardEvent(payload, broadcast) {
   if (!payload) return;
 
-  // ⭐ DEBUG LOG #1 — confirm event received
   console.log("[Velora] REWARD EVENT RECEIVED FROM SOCKET:", payload);
 
   const data = payload.data || payload;
@@ -422,7 +424,6 @@ async function handleVeloraRewardEvent(payload, broadcast) {
     console.error("[Velora] Reward fetch error:", err);
   }
 
-  // ⭐ DEBUG LOG #2 — confirm broadcast payload
   console.log("[Velora] SENDING REWARD TO OVERLAY:", {
     rewardId,
     rewardName: reward.name || catalogItem.name,
