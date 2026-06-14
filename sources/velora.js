@@ -11,7 +11,7 @@
 import WebSocket from "ws";
 
 // ⭐ IMPORTANT: Paste your real Velora token here
-const VELORA_TOKEN = "43bfa769c4ac43fd88c40c7f15660682ea3447b7bd387be610082b2c69280849";
+const VELORA_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZjFjYjk3NS1lYWNlLTQ2NTAtODI0Ni0wNTMwMDdiZDAwMzYiLCJ1c2VybmFtZSI6IkdpdmVzQU1pbnV0ZSIsImVtYWlsIjoiYmVub25rb2Vic2NoQGdtYWlsLmNvbSIsInJvbGUiOiJjcmVhdG9yIiwiaWF0IjoxNzgxMzg2NDk2LCJleHAiOjE3ODE5OTEyOTYsImF1ZCI6InZlbG9yYS1hcGkiLCJpc3MiOiJ2ZWxvcmEudHYifQ.AUDMnQ7AeJMfobcOiGjBSLSx5X0aOqRwdsDS_ROTWZg";
 
 // Avatar cache
 const avatarCache = Object.create(null);
