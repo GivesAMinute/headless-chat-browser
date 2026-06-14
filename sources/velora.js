@@ -325,13 +325,15 @@ function startVeloraSocketIO(broadcast) {
     }
 
     if (
-      event === "rewardRedeemed" ||
-      event === "channelPointRedeemed" ||
-      event === "channelPointsRedeemed"
-    ) {
-      handleVeloraRewardEvent(payload, broadcast);
-      return;
-    }
+  event === "pointsCelebration" ||   // ⭐ REAL EVENT NAME
+  event === "rewardRedeemed" ||
+  event === "channelPointRedeemed" ||
+  event === "channelPointsRedeemed"
+) {
+  handleVeloraRewardEvent(payload, broadcast);
+  return;
+}
+
   });
 }
 
