@@ -57,6 +57,9 @@ async function fetchVeloraAvatar(username) {
   }
 }
 
+// Deduplication cache
+const seenMessageIds = new Set();
+
 // MAIN SOCKET.IO HANDLER
 function startVeloraSocketIO(broadcast) {
   if (!VELORA_TOKEN || VELORA_TOKEN.includes("PASTE_")) {
@@ -129,6 +132,20 @@ function startVeloraSocketIO(broadcast) {
 // Handle chat event payload → broadcast
 async function handleVeloraChatEvent(payload, broadcast) {
   if (!payload) return;
+
+  // ⭐ Deduplicate
+  if (payload.id) {
+    if (seenMessageIds.has(payload.id)) {
+      return; // ignore duplicate
+    }
+    seenMessageIds.add(payload.id);
+
+    // prevent memory leak
+    if (seenMessageIds.size > 5000) {
+      seenMessageIds.clear();
+    }
+  }
+
 
   const data = payload;
 
