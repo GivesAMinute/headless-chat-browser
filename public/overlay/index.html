@@ -11,6 +11,19 @@
     /* ---------------------------------------------------------
        ⭐ VELORA REWARD CARD (INLINE CHAT MODE)
     --------------------------------------------------------- */
+    
+    /* Remove bubble background for reward messages */
+.reward-msg .bubble {
+  background: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Align reward card with normal chat indentation */
+.reward-msg .velora-reward-card {
+  margin-left: 48px; /* matches normal chat indentation */
+}
+
 
     .reward-msg {
       display: flex;
@@ -279,6 +292,15 @@
 
       const wrapper = document.createElement("div");
       wrapper.className = "msg platform-velora reward-msg";
+      
+      // Insert platform icon (Velora) next to the reward card
+const iconPath = getPlatformIcon("velora");
+wrapper.insertAdjacentHTML("beforeend", `
+  <span class="tooltip-wrapper">
+    <img class="platform-icon" src="${iconPath}">
+    <span class="tooltip-bubble">VELORA</span>
+  </span>
+`);
 
       const bubble = document.createElement("div");
       bubble.className = "bubble";
