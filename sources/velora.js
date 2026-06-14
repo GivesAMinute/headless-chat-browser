@@ -3,7 +3,7 @@
 // - Chat via Socket.IO (/chat namespace)
 // - Rewards via events + HTML fetch
 // - Avatar enrichment
-// - Badge mapping
+// - Badge mapping (icon + label)
 // - Emote-safe HTML passthrough
 // - Message type tagging + debug logging
 
@@ -60,35 +60,47 @@ async function fetchVeloraAvatar(username) {
   }
 }
 
-// ⭐ Badge mapping
+// ⭐ Badge mapping → { icon, label }
 function normalizeVeloraBadges(badgesRaw, data) {
   if (!Array.isArray(badgesRaw)) return [];
 
   const out = [];
 
   for (const b of badgesRaw) {
-    if (typeof b === "string") {
-      // Subscriber badge
-      if (b === "subscriber" && data.subscriptionBadge?.staticAssetUrl) {
-        out.push(data.subscriptionBadge.staticAssetUrl);
-        continue;
-      }
+    if (typeof b !== "string") continue;
 
-      // Broadcaster badge
-      if (b === "broadcaster") {
-        out.push("https://assets.velora.tv/badges/broadcaster.png");
-        continue;
-      }
-
-      // Moderator badge
-      if (b === "moderator") {
-        out.push("https://assets.velora.tv/badges/mod.png");
-        continue;
-      }
-
-      // Fallback: push raw string
-      out.push(b);
+    // Subscriber badge (with correct label, e.g. "New Subscriber")
+    if (b === "subscriber" && data.subscriptionBadge?.staticAssetUrl) {
+      out.push({
+        icon: data.subscriptionBadge.staticAssetUrl,
+        label: data.subscriptionBadge.label || "Subscriber",
+      });
+      continue;
     }
+
+    // Broadcaster badge
+    if (b === "broadcaster") {
+      out.push({
+        icon: "https://assets.velora.tv/badges/broadcaster.png",
+        label: "Broadcaster",
+      });
+      continue;
+    }
+
+    // Moderator badge
+    if (b === "moderator") {
+      out.push({
+        icon: "https://assets.velora.tv/badges/mod.png",
+        label: "Moderator",
+      });
+      continue;
+    }
+
+    // Fallback: no known icon, but keep label
+    out.push({
+      icon: null,
+      label: b,
+    });
   }
 
   return out;
@@ -145,13 +157,11 @@ function startVeloraSocketIO(broadcast) {
   chatSocket.onAny((event, payload) => {
     console.log("[Velora] EVENT:", event, JSON.stringify(payload));
 
-    // ⭐ REAL CHAT EVENT
     if (event === "newMessage") {
       handleVeloraChatEvent(payload, broadcast);
       return;
     }
 
-    // Possible reward events
     if (
       event === "rewardRedeemed" ||
       event === "channelPointRedeemed" ||
@@ -167,10 +177,9 @@ function startVeloraSocketIO(broadcast) {
 async function handleVeloraChatEvent(payload, broadcast) {
   if (!payload) return;
 
-  // ⭐ Deduplicate
   if (payload.id) {
     if (seenMessageIds.has(payload.id)) {
-      return; // ignore duplicate
+      return;
     }
     seenMessageIds.add(payload.id);
 
@@ -187,14 +196,12 @@ async function handleVeloraChatEvent(payload, broadcast) {
     data.user?.username ||
     null;
 
-  // Velora uses plain text "message"
   const html =
     data.message_html ||
     data.html ||
     data.message ||
     "";
 
-  // ⭐ Badge mapping
   const badges = normalizeVeloraBadges(data.badges, data);
 
   const avatar =
@@ -206,7 +213,7 @@ async function handleVeloraChatEvent(payload, broadcast) {
     platform: "velora",
     username,
     html,
-    badges,
+    badges, // [{icon, label}]
     avatar,
     messageType: "chat",
   };
