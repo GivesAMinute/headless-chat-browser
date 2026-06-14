@@ -82,14 +82,15 @@ function normalizeVeloraBadges(badgesRaw, data) {
       continue;
     }
 
-    // Broadcaster badge
-    if (b === "broadcaster") {
-      out.push({
-        icon: "https://assets.velora.tv/badges/broadcaster.png",
-        label: "Broadcaster",
-      });
-      continue;
-    }
+    // Broadcaster badge (correct path from Velora UI)
+if (b === "broadcaster") {
+  out.push({
+    icon: "/velora-badges/StreamerBroadcasterBadge.png",
+    label: "Broadcaster",
+  });
+  continue;
+}
+
 
     // Moderator badge
     if (b === "moderator") {
