@@ -69,8 +69,12 @@ function normalizeVeloraBadges(badgesRaw, data) {
   for (const b of badgesRaw) {
     if (typeof b !== "string") continue;
 
-    // Subscriber badge (with correct label, e.g. "New Subscriber")
-    if (b === "subscriber" && data.subscriptionBadge?.staticAssetUrl) {
+    // Subscriber badge (safe)
+    if (
+      b === "subscriber" &&
+      data.subscriptionBadge &&
+      data.subscriptionBadge.staticAssetUrl
+    ) {
       out.push({
         icon: data.subscriptionBadge.staticAssetUrl,
         label: data.subscriptionBadge.label || "Subscriber",
@@ -96,7 +100,7 @@ function normalizeVeloraBadges(badgesRaw, data) {
       continue;
     }
 
-    // Fallback: no known icon, but keep label
+    // Fallback
     out.push({
       icon: null,
       label: b,
@@ -177,6 +181,7 @@ function startVeloraSocketIO(broadcast) {
 async function handleVeloraChatEvent(payload, broadcast) {
   if (!payload) return;
 
+  // ⭐ Deduplicate
   if (payload.id) {
     if (seenMessageIds.has(payload.id)) {
       return;
