@@ -181,12 +181,10 @@
     const wrapper = document.createElement("div");
     wrapper.className = "velora-reward-wrapper";
 
-    // Insert Velora's full HTML exactly as-is
     wrapper.innerHTML = msg.rewardHTML;
 
     document.getElementById("messages").appendChild(wrapper);
 
-    // Fade out after 45 seconds
     setTimeout(() => {
       wrapper.classList.add("fade-out");
       setTimeout(() => wrapper.remove(), 1000);
@@ -204,7 +202,7 @@
       return;
     }
 
-    /* ⭐ NORMAL CHAT MESSAGE RENDERING BELOW (unchanged) */
+    /* ⭐ NORMAL CHAT MESSAGE RENDERING BELOW */
 
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
@@ -238,16 +236,15 @@
       content.appendChild(inlineAvatar);
     }
 
-    /* Velora badges */
-    if (msg.platform === "velora" && msg.badges?.length) {
-      msg.badges.forEach(src => {
-        getCachedVeloraBadge(src);
+    /* ⭐ UPDATED — Velora badges (object format) */
+    if (msg.platform === "velora" && Array.isArray(msg.badges)) {
+      msg.badges.forEach(badge => {
+        if (!badge || !badge.icon) return;
 
-        const label = src.split("/").pop().replace(/\.(png|svg)/, "");
         content.insertAdjacentHTML("beforeend", `
-          <span class="tooltip-wrapper">
-            <img class="velora-inline-badge" src="${src}">
-            <span class="tooltip-bubble">${label}</span>
+          <span class="tooltip-wrapper velora-badge">
+            <img src="${badge.icon}" alt="">
+            <span class="tooltip-bubble">${badge.label}</span>
           </span>
         `);
       });
@@ -261,7 +258,7 @@
       if (msg.isStreamer) content.insertAdjacentHTML("beforeend", STREAMER_SVG);
     }
 
-    /* Universal badges */
+    /* Universal badges (non-Velora) */
     if (msg.platform !== "velora" && msg.platform !== "blaze" && msg.badges?.length) {
       msg.badges.forEach(src => {
         const label = src.split("/").pop().replace(/\.(png|svg)/, "");
