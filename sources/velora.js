@@ -22,7 +22,7 @@ let globalEmotes = {};
 let channelEmotes = {};
 let emoteLookup = {}; // name → URL
 
-// Reward catalog cache
+// Reward catalog cache (still useful if you want it later)
 let rewardCatalog = {};
 
 // ------------------------------------------------------------
@@ -115,7 +115,7 @@ async function fetchChannelEmotes() {
 }
 
 // ------------------------------------------------------------
-// Fetch reward catalog
+// Fetch reward catalog (kept, even if we don't need HTML)
 // ------------------------------------------------------------
 async function fetchRewardCatalog() {
   try {
@@ -315,7 +315,6 @@ function startVeloraSocketIO(broadcast) {
     console.warn("[Velora] disconnected:", reason);
   });
 
-  // ⭐ ADDED: LOG EVERY EVENT NAME
   chatSocket.onAny((event, payload) => {
     console.log("[Velora] SOCKET EVENT:", event, payload);
 
@@ -324,16 +323,16 @@ function startVeloraSocketIO(broadcast) {
       return;
     }
 
+    // ⭐ REAL reward event name + legacy fallbacks
     if (
-  event === "pointsCelebration" ||   // ⭐ REAL EVENT NAME
-  event === "rewardRedeemed" ||
-  event === "channelPointRedeemed" ||
-  event === "channelPointsRedeemed"
-) {
-  handleVeloraRewardEvent(payload, broadcast);
-  return;
-}
-
+      event === "pointsCelebration" ||
+      event === "rewardRedeemed" ||
+      event === "channelPointRedeemed" ||
+      event === "channelPointsRedeemed"
+    ) {
+      handleVeloraRewardEvent(payload, broadcast);
+      return;
+    }
   });
 }
 
@@ -388,59 +387,54 @@ async function handleVeloraChatEvent(payload, broadcast) {
 }
 
 // ------------------------------------------------------------
-// Reward event
+// Reward event — mapped to Velora's pointsCelebration payload
 // ------------------------------------------------------------
 async function handleVeloraRewardEvent(payload, broadcast) {
   if (!payload) return;
 
   console.log("[Velora] REWARD EVENT RECEIVED FROM SOCKET:", payload);
 
+  // pointsCelebration sends fields at top-level
   const data = payload.data || payload;
-  const reward = data.reward || data;
 
-  const rewardId = reward.id;
-  const catalogItem = rewardCatalog[rewardId] || {};
+  // Reward identity
+  const rewardId = data.itemId;          // actual reward id
+  const rewardName = data.itemName;      // "I Just Farted!"
 
-  let rewardHTML = null;
-  let rewardIcon = catalogItem.iconUrl || reward.icon || null;
-  let rewardColor = catalogItem.cardDesign?.border?.color || "#ff00ff";
+  // Full card design is already provided
+  const cardDesign = data.cardDesign || {};
 
-  try {
-    if (rewardId) {
-      const res = await fetch(
-        `https://api.velora.tv/api/channel-points/rewards/${rewardId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${VELORA_TOKEN}`,
-          },
-        }
-      );
+  // Icon resolution
+  const rewardIcon =
+    cardDesign.icon?.customIconUrl ||
+    cardDesign.icon?.emoteUrl ||
+    data.itemIconUrl ||
+    null;
 
-      if (res.ok) {
-        const json = await res.json();
-        rewardHTML = json?.html || null;
-        rewardIcon = json?.icon || rewardIcon;
-      }
-    }
-  } catch (err) {
-    console.error("[Velora] Reward fetch error:", err);
-  }
+  // Border color
+  const rewardColor =
+    cardDesign.border?.color ||
+    "#ff00ff";
+
+  // Velora does NOT provide HTML for these custom cards
+  const rewardHTML = null;
 
   console.log("[Velora] SENDING REWARD TO OVERLAY:", {
     rewardId,
-    rewardName: reward.name || catalogItem.name,
-    username: data.username || data.user?.username,
+    rewardName,
+    username: data.username || data.displayName,
     hasHTML: !!rewardHTML
   });
 
   broadcast({
     platform: "velora",
     type: "reward",
-    username: data.username || data.user?.username || null,
-    rewardName: reward.name || catalogItem.name || null,
+    username: data.username || data.displayName || null,
+    rewardName,
     rewardIcon,
     rewardColor,
     rewardHTML,
+    cardDesign,
     messageType: "reward"
   });
 }

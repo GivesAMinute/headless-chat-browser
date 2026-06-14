@@ -1,159 +1,189 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Merged Chat Overlay</title>
+<meta charset="UTF-8" />
+<title>Merged Chat Overlay</title>
 
-  <link rel="stylesheet" href="overlay.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="overlay.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
-  <!-- Reward-specific styling (kept inline so no new files are needed) -->
-  <style>
-    .velora-reward-wrapper {
-      max-width: 520px;
-      margin: 8px 0;
-      animation: fadeInUp 0.25s ease-out;
-    }
+<style>
+  /* ⭐ Velora reward card styles */
 
-    .velora-reward-wrapper.fade-out {
+  .velora-reward-wrapper {
+    position: fixed;
+    left: 50%;
+    bottom: 8%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    pointer-events: none;
+  }
+
+  .velora-reward-card {
+    min-width: 420px;
+    max-width: 640px;
+    padding: 16px 20px;
+    border-radius: 16px;
+    border: 3px solid #ffffff;
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: #ffffff;
+    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    opacity: 0;
+    transform: translateY(40px);
+    animation: veloraRewardIn 350ms ease-out forwards;
+  }
+
+  .velora-reward-card.fade-out {
+    animation: veloraRewardOut 400ms ease-in forwards;
+  }
+
+  .velora-reward-icon {
+    flex: 0 0 auto;
+    width: 72px;
+    height: 72px;
+    border-radius: 18px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .velora-reward-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .velora-reward-content {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .velora-reward-line1 {
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: 0.02em;
+    text-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
+  }
+
+  .velora-reward-line2 {
+    font-weight: 500;
+    font-size: 16px;
+    opacity: 0.95;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  }
+
+  .velora-reward-username {
+    font-weight: 700;
+  }
+
+  @keyframes veloraRewardIn {
+    from {
       opacity: 0;
-      transform: translateY(-6px);
-      transition: opacity 0.6s ease, transform 0.6s ease;
+      transform: translateY(40px);
     }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 
-    .reward-fallback {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.08);
-      border-left: 6px solid #ff00ff;
-      box-shadow: 0 0 18px rgba(0, 0, 0, 0.45);
+  @keyframes veloraRewardOut {
+    from {
+      opacity: 1;
+      transform: translateY(0);
     }
+    to {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+  }
+</style>
 
-    .reward-fallback-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      overflow: hidden;
-      background: rgba(0, 0, 0, 0.4);
-      flex-shrink: 0;
-    }
-
-    .reward-fallback-icon img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .reward-fallback-text {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .reward-fallback-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #ffcc00;
-    }
-
-    .reward-fallback-body {
-      font-size: 14px;
-      color: #ffffff;
-    }
-
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(6px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-  </style>
 </head>
 
 <body>
-  <div id="messages"></div>
+<div id="messages"></div>
 
-  <script>
-    if (window.__CHAT_OVERLAY_CONNECTED__) {
-      console.log("Overlay already connected, skipping duplicate WS");
-      throw new Error("Duplicate overlay instance");
+<script>
+  if (window.__CHAT_OVERLAY_CONNECTED__) {
+    console.log("Overlay already connected, skipping duplicate WS");
+    throw new Error("Duplicate overlay instance");
+  }
+  window.__CHAT_OVERLAY_CONNECTED__ = true;
+
+  const ws = new WebSocket("wss://" + location.host);
+
+  const PLATFORM_MAP = {
+    youtube: "youtube",
+    "youtube.com": "youtube",
+    yt: "youtube",
+
+    velora: "velora",
+    "velora.live": "velora",
+
+    pilled: "pilled",
+    "pilled.net": "pilled",
+
+    nimotv: "nimotv",
+    nimo: "nimotv",
+
+    kick: "kick",
+    "kick.com": "kick",
+
+    rumble: "rumble",
+    odysee: "odysee",
+    arena: "arena",
+
+    blaze: "blaze",
+
+    bitchute: "bitchute",
+    vpzone: "vpzone",
+
+    twitch: "twitch",
+    beam: "beam"
+  };
+
+  function getPlatformIcon(platform) {
+    platform = platform.toLowerCase();
+    const mapped = PLATFORM_MAP[platform];
+    if (mapped === null) return null;
+    if (mapped) return `/icons/${mapped}.png`;
+    return `/icons/default.png`;
+  }
+
+  function colorForUsername(name, platform) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = (hash * 31 + name.charCodeAt(i)) | 0;
     }
-    window.__CHAT_OVERLAY_CONNECTED__ = true;
+    const index = Math.abs(hash);
 
-    const ws = new WebSocket("wss://" + location.host);
-
-    const PLATFORM_MAP = {
-      youtube: "youtube",
-      "youtube.com": "youtube",
-      yt: "youtube",
-
-      velora: "velora",
-      "velora.live": "velora",
-
-      pilled: "pilled",
-      "pilled.net": "pilled",
-
-      nimotv: "nimotv",
-      nimo: "nimotv",
-
-      kick: "kick",
-      "kick.com": "kick",
-
-      rumble: "rumble",
-      odysee: "odysee",
-      arena: "arena",
-
-      blaze: "blaze",
-
-      bitchute: "bitchute",
-      vpzone: "vpzone",
-
-      twitch: "twitch",
-      beam: "beam"
+    const palettes = {
+      twitch: ["#9146FF","#A970FF","#B98CFF","#7C4DFF","#9B59FF","#8E44FF","#A55BFF","#C39BFF","#6E3CE6","#B084FF","#9F6BFF","#7A3FE6"],
+      youtube: ["#FF0000","#FF1A1A","#FF3333","#FF4D4D","#FF6666","#E60000","#CC0000","#FF5E57","#FF2D55","#FF3B30","#FF6A6A","#FF7F7F"],
+      velora: ["#F5C451","#F7D06A","#FFD97A","#E8B23A","#E6A93E","#FFCC66","#FFDB85","#F2B94F","#DFA63A","#F8D88C","#E4B75A","#F0C76E"],
+      kick: ["#00FF66","#00E65C","#00CC52","#00B347","#00993D","#00FF7A","#00FF55","#00E64D","#00CC44","#00B33A","#00FF88","#00FF99"],
+      rumble: ["#00AA44","#00993D","#008833","#00772A","#006622","#00BB55","#00CC66","#00994D","#008040","#007338","#00D46A","#00C45C"],
+      beam: ["#00E0FF","#33E8FF","#66F0FF","#00C8E6","#00B0CC","#00F2FF","#4DF6FF","#80FAFF","#00D4E6","#00BED1","#00E8F2","#33F0FF"],
+      blaze: ["#FF8800","#FF9C33","#FFB566","#FF7A00","#E66F00","#CC6400","#FF9933","#FFB266","#FF8C1A","#FF751A","#E67300","#CC6600"]
     };
 
-    function getPlatformIcon(platform) {
-      platform = platform.toLowerCase();
-      const mapped = PLATFORM_MAP[platform];
-      if (mapped === null) return null;
-      if (mapped) return `/icons/${mapped}.png`;
-      return `/icons/default.png`;
-    }
+    const palette = palettes[platform];
+    if (palette) return palette[index % palette.length];
 
-    function colorForUsername(name, platform) {
-      let hash = 0;
-      for (let i = 0; i < name.length; i++) {
-        hash = (hash * 31 + name.charCodeAt(i)) | 0;
-      }
-      const index = Math.abs(hash);
+    const hue = index % 360;
+    return `hsl(${hue}, 70%, 60%)`;
+  }
 
-      const palettes = {
-        twitch: ["#9146FF","#A970FF","#B98CFF","#7C4DFF","#9B59FF","#8E44FF","#A55BFF","#C39BFF","#6E3CE6","#B084FF","#9F6BFF","#7A3FE6"],
-        youtube: ["#FF0000","#FF1A1A","#FF3333","#FF4D4D","#FF6666","#E60000","#CC0000","#FF5E57","#FF2D55","#FF3B30","#FF6A6A","#FF7F7F"],
-        velora: ["#F5C451","#F7D06A","#FFD97A","#E8B23A","#E6A93E","#FFCC66","#FFDB85","#F2B94F","#DFA63A","#F8D88C","#E4B75A","#F0C76E"],
-        kick: ["#00FF66","#00E65C","#00CC52","#00B347","#00993D","#00FF7A","#00FF55","#00E64D","#00CC44","#00B33A","#00FF88","#00FF99"],
-        rumble: ["#00AA44","#00993D","#008833","#00772A","#006622","#00BB55","#00CC66","#00994D","#008040","#007338","#00D46A","#00C45C"],
-        beam: ["#00E0FF","#33E8FF","#66F0FF","#00C8E6","#00B0CC","#00F2FF","#4DF6FF","#80FAFF","#00D4E6","#00BED1","#00E8F2","#33F0FF"],
-        blaze: ["#FF8800","#FF9C33","#FFB566","#FF7A00","#E66F00","#CC6400","#FF9933","#FFB266","#FF8C1A","#FF751A","#E67300","#CC6600"]
-      };
-
-      const palette = palettes[platform];
-      if (palette) return palette[index % palette.length];
-
-      const hue = index % 360;
-      return `hsl(${hue}, 70%, 60%)`;
-    }
-
-    /* Blaze role icons (unchanged) */
-    const MOD_SVG = `
+  /* Blaze role icons (unchanged) */
+  const MOD_SVG = `
 <span class="tooltip-wrapper">
   <span class="blaze-icon-wrapper">
     <svg class="blaze-large-icon" xmlns="http://www.w3.org/2000/svg"
@@ -165,7 +195,7 @@
   <span class="tooltip-bubble">Moderator</span>
 </span>`;
 
-    const OG_SVG = `
+  const OG_SVG = `
 <span class="tooltip-wrapper">
   <span class="blaze-og-badge">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
@@ -177,7 +207,7 @@
   <span class="tooltip-bubble">OG</span>
 </span>`;
 
-    const VIP_SVG = `
+  const VIP_SVG = `
 <span class="tooltip-wrapper">
   <span class="blaze-vip-badge">
     <img src="https://cdn.blaze.stream/site/icons/vip.png" alt="">
@@ -186,7 +216,7 @@
   <span class="tooltip-bubble">VIP</span>
 </span>`;
 
-    const STREAMER_SVG = `
+  const STREAMER_SVG = `
 <span class="tooltip-wrapper">
   <span class="blaze-icon-wrapper">
     <svg class="blaze-large-icon" xmlns="http://www.w3.org/2000/svg"
@@ -200,211 +230,314 @@
   <span class="tooltip-bubble">Streamer</span>
 </span>`;
 
-    /* Velora avatar cache */
-    const veloraAvatarCache = new Map();
+  /* Velora caches */
+  const veloraAvatarCache = new Map();
 
-    async function ensureVeloraAvatar(msg) {
-      if (msg.platform !== "velora") return msg;
-      if (!msg.username) return msg;
+  async function ensureVeloraAvatar(msg) {
+    if (msg.platform !== "velora") return msg;
+    if (!msg.username) return msg;
 
-      if (veloraAvatarCache.has(msg.username)) {
-        msg.avatar = veloraAvatarCache.get(msg.username);
-        return msg;
-      }
-
-      if (msg.avatar && msg.avatar.startsWith("http")) {
-        veloraAvatarCache.set(msg.username, msg.avatar);
-        return msg;
-      }
-
-      try {
-        const res = await fetch(
-          `https://velora.tv/api/users/${encodeURIComponent(msg.username)}`
-        );
-        if (!res.ok) return msg;
-
-        const data = await res.json();
-        if (data?.avatarUrl?.startsWith("http")) {
-          veloraAvatarCache.set(msg.username, data.avatarUrl);
-          msg.avatar = data.avatarUrl;
-        }
-      } catch {}
-
+    if (veloraAvatarCache.has(msg.username)) {
+      msg.avatar = veloraAvatarCache.get(msg.username);
       return msg;
     }
 
-    /* ⭐ FINAL — INLINE REWARD CARD RENDERER */
-    function renderVeloraRewardMessage(msg) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "velora-reward-wrapper";
+    if (msg.avatar && msg.avatar.startsWith("http")) {
+      veloraAvatarCache.set(msg.username, msg.avatar);
+      return msg;
+    }
 
-      if (msg.rewardHTML) {
-        // Full Velora card HTML from backend
-        wrapper.innerHTML = msg.rewardHTML;
-      } else {
-        // Fallback card using metadata
-        const color = msg.rewardColor || "#ff00ff";
-        const icon = msg.rewardIcon || "";
-        const username = msg.username || "Someone";
-        const rewardName = msg.rewardName || "a reward";
+    try {
+      const res = await fetch(
+        `https://velora.tv/api/users/${encodeURIComponent(msg.username)}`
+      );
+      if (!res.ok) return msg;
 
-        wrapper.innerHTML = `
-          <div class="reward-fallback" style="border-left-color: ${color}">
-            <div class="reward-fallback-icon">
-              ${icon ? `<img src="${icon}" alt="${rewardName}">` : ""}
-            </div>
-            <div class="reward-fallback-text">
-              <div class="reward-fallback-title">Channel Points</div>
-              <div class="reward-fallback-body">
-                <strong>${username}</strong> redeemed <strong>${rewardName}</strong>
-              </div>
-            </div>
-          </div>
-        `;
+      const data = await res.json();
+      if (data?.avatarUrl?.startsWith("http")) {
+        veloraAvatarCache.set(msg.username, data.avatarUrl);
+        msg.avatar = data.avatarUrl;
       }
+    } catch {}
 
+    return msg;
+  }
+
+  /* ⭐ FULL VELORA REWARD CARD RENDERER */
+  function buildVeloraBackgroundStyle(cardDesign) {
+    if (!cardDesign || !cardDesign.background) return "";
+    const bg = cardDesign.background;
+
+    if (bg.type === "gradient" && Array.isArray(bg.colors) && bg.colors.length > 0) {
+      const angle = typeof bg.angle === "number" ? bg.angle : 0;
+      const stops = bg.colors.join(", ");
+      return `background: linear-gradient(${angle}deg, ${stops});`;
+    }
+
+    if (bg.color) {
+      return `background: ${bg.color};`;
+    }
+
+    return "";
+  }
+
+  function buildVeloraTextureStyle(cardDesign) {
+    // For now we just slightly darken; full texture patterns would be overkill
+    if (!cardDesign || !cardDesign.texture || !cardDesign.texture.enabled) return "";
+    return "box-shadow: inset 0 0 40px rgba(0,0,0,0.25);";
+  }
+
+  function buildVeloraFontStyle(textLine) {
+    if (!textLine) return "";
+    const parts = [];
+    if (textLine.font) {
+      parts.push(`font-family: "${textLine.font}", "Inter", system-ui, sans-serif`);
+    }
+    if (textLine.size === "lg") {
+      parts.push("font-size: 20px");
+    } else if (textLine.size === "md") {
+      parts.push("font-size: 16px");
+    }
+    if (textLine.color && textLine.color.hex) {
+      parts.push(`color: ${textLine.color.hex}`);
+    }
+    return parts.join("; ");
+  }
+
+  function resolveVeloraLineContent(template, username, rewardName) {
+    const user = username || "";
+    const reward = rewardName || "";
+    return (template || "")
+      .replace("{User}", user)
+      .replace("{Reward}", reward);
+  }
+
+  function renderVeloraRewardMessage(msg) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "velora-reward-wrapper";
+
+    // If Velora ever sends HTML, we still support it
+    if (msg.rewardHTML) {
+      wrapper.innerHTML = msg.rewardHTML;
       document.getElementById("messages").appendChild(wrapper);
 
-      // Auto-remove after 45s
       setTimeout(() => {
         wrapper.classList.add("fade-out");
         setTimeout(() => wrapper.remove(), 1000);
       }, 45000);
+      return;
     }
 
-    ws.onmessage = async (event) => {
-      let msg = JSON.parse(event.data);
+    const cardDesign = msg.cardDesign || {};
 
-      msg = await ensureVeloraAvatar(msg);
-      
-      console.log("OVERLAY RECEIVED:", msg);
-      
+    const rewardName =
+      msg.rewardName ||
+      msg.itemName ||
+      "Reward";
 
-      /* ⭐ Reward message routing */
-      if (msg.platform === "velora" && msg.type === "reward") {
-        renderVeloraRewardMessage(msg);
-        return;
-      }
+    const username = msg.username || "";
 
-      /* ⭐ NORMAL CHAT MESSAGE RENDERING BELOW */
+    const iconUrl =
+      msg.rewardIcon ||
+      cardDesign.icon?.customIconUrl ||
+      cardDesign.icon?.emoteUrl ||
+      "";
 
-      const wrapper = document.createElement("div");
-      wrapper.className = "msg";
+    const borderColor =
+      msg.rewardColor ||
+      cardDesign.border?.color ||
+      "#ffffff";
 
-      if (msg.platform) {
-        wrapper.classList.add(`platform-${msg.platform.toLowerCase()}`);
-      }
+    const bgStyle = buildVeloraBackgroundStyle(cardDesign);
+    const textureStyle = buildVeloraTextureStyle(cardDesign);
 
-      /* PLATFORM ICON */
-      const iconPath = getPlatformIcon(msg.platform);
-      if (iconPath) {
-        wrapper.insertAdjacentHTML("beforeend", `
-          <span class="tooltip-wrapper">
-            <img class="platform-icon" src="${iconPath}">
-            <span class="tooltip-bubble">${msg.platform.toUpperCase()}</span>
+    const line1Template = cardDesign.textLine1?.content || "{User}:";
+    const line2Template = cardDesign.textLine2?.content || "{Reward}";
+
+    const line1Text = resolveVeloraLineContent(line1Template, username, rewardName);
+    const line2Text = resolveVeloraLineContent(line2Template, username, rewardName);
+
+    const line1Style = buildVeloraFontStyle(cardDesign.textLine1);
+    const line2Style = buildVeloraFontStyle(cardDesign.textLine2);
+
+    const card = document.createElement("div");
+    card.className = "velora-reward-card";
+    card.style.borderColor = borderColor;
+
+    const combinedStyle = [bgStyle, textureStyle].filter(Boolean).join(" ");
+    if (combinedStyle) {
+      card.setAttribute("style", (card.getAttribute("style") || "") + combinedStyle);
+    }
+
+    const icon = document.createElement("div");
+    icon.className = "velora-reward-icon";
+
+    if (iconUrl) {
+      const img = document.createElement("img");
+      img.src = iconUrl;
+      img.alt = rewardName;
+      icon.appendChild(img);
+    }
+
+    const content = document.createElement("div");
+    content.className = "velora-reward-content";
+
+    const line1 = document.createElement("div");
+    line1.className = "velora-reward-line1";
+    if (line1Style) line1.setAttribute("style", line1Style);
+    line1.textContent = line1Text;
+
+    const line2 = document.createElement("div");
+    line2.className = "velora-reward-line2";
+    if (line2Style) line2.setAttribute("style", line2Style);
+    line2.textContent = line2Text;
+
+    content.appendChild(line1);
+    content.appendChild(line2);
+
+    card.appendChild(icon);
+    card.appendChild(content);
+
+    wrapper.appendChild(card);
+    document.getElementById("messages").appendChild(wrapper);
+
+    setTimeout(() => {
+      card.classList.add("fade-out");
+      setTimeout(() => wrapper.remove(), 600);
+    }, 45000);
+  }
+
+  ws.onmessage = async (event) => {
+    let msg = JSON.parse(event.data);
+    console.log("OVERLAY RECEIVED:", msg);
+
+    msg = await ensureVeloraAvatar(msg);
+
+    /* ⭐ Reward message routing */
+    if (msg.platform === "velora" && msg.type === "reward") {
+      renderVeloraRewardMessage(msg);
+      return;
+    }
+
+    /* ⭐ NORMAL CHAT MESSAGE RENDERING BELOW */
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "msg";
+
+    if (msg.platform) {
+      wrapper.classList.add(`platform-${msg.platform.toLowerCase()}`);
+    }
+
+    /* PLATFORM ICON */
+    const iconPath = getPlatformIcon(msg.platform);
+    if (iconPath) {
+      wrapper.insertAdjacentHTML("beforeend", `
+        <span class="tooltip-wrapper">
+          <img class="platform-icon" src="${iconPath}">
+          <span class="tooltip-bubble">${msg.platform.toUpperCase()}</span>
+        </span>
+      `);
+    }
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+
+    const content = document.createElement("div");
+    content.className = "content";
+
+    /* INLINE AVATAR */
+    if (msg.avatar && typeof msg.avatar === "string" && msg.avatar.startsWith("http")) {
+      const inlineAvatar = document.createElement("img");
+      inlineAvatar.className = "inline-avatar";
+      inlineAvatar.src = msg.avatar;
+      content.appendChild(inlineAvatar);
+    }
+
+    /* ⭐ UPDATED — Velora badges (object format) */
+    if (msg.platform === "velora" && Array.isArray(msg.badges)) {
+      msg.badges.forEach(badge => {
+        if (!badge || !badge.icon) return;
+
+        content.insertAdjacentHTML("beforeend", `
+          <span class="tooltip-wrapper velora-badge">
+            <img src="${badge.icon}" alt="">
+            <span class="tooltip-bubble">${badge.label}</span>
           </span>
         `);
-      }
-
-      const bubble = document.createElement("div");
-      bubble.className = "bubble";
-
-      const content = document.createElement("div");
-      content.className = "content";
-
-      /* INLINE AVATAR */
-      if (msg.avatar && typeof msg.avatar === "string" && msg.avatar.startsWith("http")) {
-        const inlineAvatar = document.createElement("img");
-        inlineAvatar.className = "inline-avatar";
-        inlineAvatar.src = msg.avatar;
-        content.appendChild(inlineAvatar);
-      }
-
-      /* Velora badges (object format) */
-      if (msg.platform === "velora" && Array.isArray(msg.badges)) {
-        msg.badges.forEach(badge => {
-          if (!badge || !badge.icon) return;
-
-          content.insertAdjacentHTML("beforeend", `
-            <span class="tooltip-wrapper velora-badge">
-              <img src="${badge.icon}" alt="">
-              <span class="tooltip-bubble">${badge.label}</span>
-            </span>
-          `);
-        });
-      }
-
-      /* Blaze role icons */
-      if (msg.platform === "blaze") {
-        if (msg.isMod)      content.insertAdjacentHTML("beforeend", MOD_SVG);
-        if (msg.isOG)       content.insertAdjacentHTML("beforeend", OG_SVG);
-        if (msg.isVIP)      content.insertAdjacentHTML("beforeend", VIP_SVG);
-        if (msg.isStreamer) content.insertAdjacentHTML("beforeend", STREAMER_SVG);
-      }
-
-      /* Universal badges (non-Velora) */
-      if (msg.platform !== "velora" && msg.platform !== "blaze" && msg.badges?.length) {
-        msg.badges.forEach(src => {
-          const label = src.split("/").pop().replace(/\.(png|svg)/, "");
-          content.insertAdjacentHTML("beforeend", `
-            <span class="tooltip-wrapper">
-              <img class="velora-inline-badge" src="${src}">
-              <span class="tooltip-bubble">${label}</span>
-            </span>
-          `);
-        });
-      }
-
-      /* USERNAME */
-      let cleanName = msg.username;
-      if (msg.platform === "youtube" && cleanName?.startsWith("@")) {
-        cleanName = cleanName.substring(1);
-      }
-
-      const name = document.createElement("div");
-      name.className = "username";
-      name.textContent = cleanName || "";
-      name.style.color = colorForUsername(cleanName || "", msg.platform);
-      content.appendChild(name);
-
-      /* MESSAGE TEXT */
-      const text = document.createElement("div");
-      text.className = "text";
-      text.innerHTML = msg.html;
-
-      text.querySelectorAll("img").forEach(img => {
-        const isSmall =
-          (img.naturalWidth && img.naturalWidth <= 40) ||
-          (img.width && img.width <= 40);
-
-        if (!isSmall) return;
-
-        if (["youtube", "velora", "blaze"].includes(msg.platform)) {
-          img.classList.add("scaled-emote");
-        }
       });
+    }
 
-      text.querySelectorAll("video").forEach(v => {
-        v.muted = true;
-        v.autoplay = true;
-        v.loop = true;
-        v.playsInline = true;
-        v.play().catch(() => {});
+    /* Blaze role icons */
+    if (msg.platform === "blaze") {
+      if (msg.isMod)      content.insertAdjacentHTML("beforeend", MOD_SVG);
+      if (msg.isOG)       content.insertAdjacentHTML("beforeend", OG_SVG);
+      if (msg.isVIP)      content.insertAdjacentHTML("beforeend", VIP_SVG);
+      if (msg.isStreamer) content.insertAdjacentHTML("beforeend", STREAMER_SVG);
+    }
+
+    /* Universal badges (non-Velora) */
+    if (msg.platform !== "velora" && msg.platform !== "blaze" && msg.badges?.length) {
+      msg.badges.forEach(src => {
+        const label = src.split("/").pop().replace(/\.(png|svg)/, "");
+        content.insertAdjacentHTML("beforeend", `
+          <span class="tooltip-wrapper">
+            <img class="velora-inline-badge" src="${src}">
+            <span class="tooltip-bubble">${label}</span>
+          </span>
+        `);
       });
+    }
 
-      content.appendChild(text);
+    /* USERNAME */
+    let cleanName = msg.username;
+    if (msg.platform === "youtube" && cleanName?.startsWith("@")) {
+      cleanName = cleanName.substring(1);
+    }
 
-      bubble.appendChild(content);
-      wrapper.appendChild(bubble);
+    const name = document.createElement("div");
+    name.className = "username";
+    name.textContent = cleanName || "";
+    name.style.color = colorForUsername(cleanName || "", msg.platform);
+    content.appendChild(name);
 
-      document.getElementById("messages").appendChild(wrapper);
+    /* MESSAGE TEXT */
+    const text = document.createElement("div");
+    text.className = "text";
+    text.innerHTML = msg.html;
 
-      /* Swipe-left exit */
-      setTimeout(() => {
-        bubble.classList.add("fadeOut");
-        setTimeout(() => wrapper.remove(), 600);
-      }, 45000);
-    };
-  </script>
+    text.querySelectorAll("img").forEach(img => {
+      const isSmall =
+        (img.naturalWidth && img.naturalWidth <= 40) ||
+        (img.width && img.width <= 40);
+
+      if (!isSmall) return;
+
+      if (["youtube", "velora", "blaze"].includes(msg.platform)) {
+        img.classList.add("scaled-emote");
+      }
+    });
+
+    text.querySelectorAll("video").forEach(v => {
+      v.muted = true;
+      v.autoplay = true;
+      v.loop = true;
+      v.playsInline = true;
+      v.play().catch(() => {});
+    });
+
+    content.appendChild(text);
+
+    bubble.appendChild(content);
+    wrapper.appendChild(bubble);
+
+    document.getElementById("messages").appendChild(wrapper);
+
+    /* Swipe-left exit */
+    setTimeout(() => {
+      bubble.classList.add("fadeOut");
+      setTimeout(() => wrapper.remove(), 600);
+    }, 45000);
+  };
+</script>
 </body>
 </html>
