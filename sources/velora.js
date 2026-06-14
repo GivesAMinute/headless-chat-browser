@@ -6,28 +6,29 @@
 // - Badge caching
 // - Emote-safe HTML passthrough
 // - Message type tagging
+// - Full debug logging
 
 import WebSocket from "ws";
 
-// Node 18+ has global fetch
+// ⭐ IMPORTANT: Paste your real Velora token here
+const VELORA_TOKEN = "43bfa769c4ac43fd88c40c7f15660682ea3447b7bd387be610082b2c69280849";
+
+// Avatar cache
+const avatarCache = Object.create(null);
+
+// Badge cache
+const badgeCache = Object.create(null);
 
 export function startVelora(broadcast) {
   console.log("Starting Velora WebSocket ingestion…");
   startVeloraWebSocket(broadcast);
 }
 
-// Avatar cache
-const avatarCache = Object.create(null);
-
-// Badge cache (by badge ID or icon URL)
-const badgeCache = Object.create(null);
-
+// Fetch avatar
 async function fetchVeloraAvatar(username) {
   if (!username) return null;
 
-  if (Object.prototype.hasOwnProperty.call(avatarCache, username)) {
-    return avatarCache[username];
-  }
+  if (avatarCache[username]) return avatarCache[username];
 
   try {
     const res = await fetch(
@@ -52,20 +53,17 @@ async function fetchVeloraAvatar(username) {
   }
 }
 
-// Normalize badges from WS payload into simple icon URLs
+// Normalize badges
 function normalizeVeloraBadges(badgesRaw) {
   if (!Array.isArray(badgesRaw)) return [];
 
   return badgesRaw
     .map((b) => {
-      // Velora WS usually sends { id, name, icon }
       if (!b) return null;
 
       const key = b.id || b.icon || JSON.stringify(b);
 
-      if (badgeCache[key]) {
-        return badgeCache[key];
-      }
+      if (badgeCache[key]) return badgeCache[key];
 
       const icon = b.icon || null;
       if (!icon) return null;
@@ -76,28 +74,22 @@ function normalizeVeloraBadges(badgesRaw) {
     .filter(Boolean);
 }
 
-// Map Velora WS message subtype to a simple type tag
+// Map message type
 function mapVeloraMessageType(data) {
-  // If Velora ever sends explicit types, map them here.
-  // For now we just distinguish normal vs system vs action if present.
   if (!data) return "chat";
-
   if (data.is_action) return "action";
   if (data.is_system) return "system";
-
   return "chat";
 }
 
 // MAIN WS HANDLER
 function startVeloraWebSocket(broadcast) {
-  const VELORA_TOKEN =
-    process.env.VELORA_TOKEN ||
-    "PASTE_YOUR_VELORA_ACCESS_TOKEN_HERE"; // <-- paste your token
+  console.log("Connecting to Velora WebSocket…");
 
   const ws = new WebSocket("wss://api.velora.tv/api/chat");
 
   ws.on("open", () => {
-    console.log("Velora WebSocket connected.");
+    console.log("Velora WebSocket connected. Sending auth…");
 
     ws.send(
       JSON.stringify({
@@ -112,6 +104,20 @@ function startVeloraWebSocket(broadcast) {
     try {
       msg = JSON.parse(raw);
     } catch {
+      console.warn("Velora WS: Received non-JSON message");
+      return;
+    }
+
+    console.log("Velora WS RAW:", msg);
+
+    // AUTH RESPONSE
+    if (msg.type === "authenticated") {
+      console.log("Velora WS: Authentication successful");
+      return;
+    }
+
+    if (msg.type === "authentication_failed") {
+      console.error("Velora WS: Authentication FAILED");
       return;
     }
 
@@ -120,25 +126,18 @@ function startVeloraWebSocket(broadcast) {
       const data = msg.data || {};
 
       const username = data.username || null;
-
-      // EXACT mapping: keep Velora's HTML (with emotes) as-is
       const html = data.message_html || "";
-
-      // Badge normalization + caching
       const badges = normalizeVeloraBadges(data.badges || []);
-
-      // Optional: message type tagging (for future coloring)
       const messageType = mapVeloraMessageType(data);
-
       const avatar = await fetchVeloraAvatar(username);
 
       const payload = {
         platform: "velora",
         username,
-        html,          // emotes preserved
-        badges,        // cached icons
+        html,
+        badges,
         avatar,
-        messageType,   // "chat" | "action" | "system" (if present)
+        messageType,
       };
 
       console.log("VELORA WS CHAT:", payload);
@@ -153,7 +152,6 @@ function startVeloraWebSocket(broadcast) {
 
       console.log("VELORA WS REWARD IN:", msg);
 
-      // Fetch REAL Velora reward card HTML
       let rewardHTML = null;
 
       try {
@@ -191,8 +189,9 @@ function startVeloraWebSocket(broadcast) {
     }
   });
 
-  ws.on("close", () => {
-    console.log("Velora WebSocket disconnected. Reconnecting in 5s…");
+  ws.on("close", (code) => {
+    console.warn("Velora WebSocket closed:", code);
+    console.log("Reconnecting in 5s…");
     setTimeout(() => startVeloraWebSocket(broadcast), 5000);
   });
 
