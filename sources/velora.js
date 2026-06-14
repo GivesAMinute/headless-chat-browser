@@ -3,7 +3,7 @@
 // - Chat via Socket.IO (/chat namespace)
 // - Rewards via events + HTML fetch
 // - Avatar enrichment
-// - Badge passthrough
+// - Badge mapping
 // - Emote-safe HTML passthrough
 // - Message type tagging + debug logging
 
@@ -16,10 +16,13 @@ const VELORA_TOKEN =
 
 const VELORA_CHANNEL_ID =
   process.env.VELORA_CHANNEL_ID ||
-  "4f1cb975-eace-4650-8246-053007bd0036"; // e.g. "4f1cb975-eace-4650-8246-053007bd0036"
+  "4f1cb975-eace-4650-8246-053007bd0036";
 
 // Avatar cache
 const avatarCache = Object.create(null);
+
+// Deduplication cache
+const seenMessageIds = new Set();
 
 export function startVelora(broadcast) {
   console.log("Starting Velora Socket.IO ingestion…");
@@ -57,8 +60,39 @@ async function fetchVeloraAvatar(username) {
   }
 }
 
-// Deduplication cache
-const seenMessageIds = new Set();
+// ⭐ Badge mapping
+function normalizeVeloraBadges(badgesRaw, data) {
+  if (!Array.isArray(badgesRaw)) return [];
+
+  const out = [];
+
+  for (const b of badgesRaw) {
+    if (typeof b === "string") {
+      // Subscriber badge
+      if (b === "subscriber" && data.subscriptionBadge?.staticAssetUrl) {
+        out.push(data.subscriptionBadge.staticAssetUrl);
+        continue;
+      }
+
+      // Broadcaster badge
+      if (b === "broadcaster") {
+        out.push("https://assets.velora.tv/badges/broadcaster.png");
+        continue;
+      }
+
+      // Moderator badge
+      if (b === "moderator") {
+        out.push("https://assets.velora.tv/badges/mod.png");
+        continue;
+      }
+
+      // Fallback: push raw string
+      out.push(b);
+    }
+  }
+
+  return out;
+}
 
 // MAIN SOCKET.IO HANDLER
 function startVeloraSocketIO(broadcast) {
@@ -140,12 +174,10 @@ async function handleVeloraChatEvent(payload, broadcast) {
     }
     seenMessageIds.add(payload.id);
 
-    // prevent memory leak
     if (seenMessageIds.size > 5000) {
       seenMessageIds.clear();
     }
   }
-
 
   const data = payload;
 
@@ -159,11 +191,11 @@ async function handleVeloraChatEvent(payload, broadcast) {
   const html =
     data.message_html ||
     data.html ||
-    data.message || // ⭐ real field
+    data.message ||
     "";
 
-  // Badges are simple strings like ["broadcaster","subscriber"]
-  const badges = Array.isArray(data.badges) ? data.badges : [];
+  // ⭐ Badge mapping
+  const badges = normalizeVeloraBadges(data.badges, data);
 
   const avatar =
     data.avatarUrl ||
