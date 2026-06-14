@@ -276,6 +276,9 @@
       let msg = JSON.parse(event.data);
 
       msg = await ensureVeloraAvatar(msg);
+      
+      console.log("OVERLAY RECEIVED:", msg);
+
 
       /* ⭐ Reward message routing */
       if (msg.platform === "velora" && msg.type === "reward") {
