@@ -1,5 +1,7 @@
 // sources/velora.js
 
+import WebSocket from "ws";
+import fetch from "node-fetch"; // Required for reward card fetch
 import { sanitizeHTML } from "../utils/sanitizeHTML.js";
 
 export async function startVelora(browser, broadcast) {
@@ -44,77 +46,30 @@ export async function startVelora(browser, broadcast) {
     }
   }
 
-  // Relay with avatar enrichment + backend sanitization + reward support
+  // Relay with avatar enrichment (DOM chat path)
   await page.exposeFunction("relayVelora", async (msg) => {
-    console.log("VELORA DEBUG incoming:", msg);
+    console.log("VELORA DEBUG incoming (DOM):", msg);
 
-    // ⭐ Reward card path
-    if (msg.type === "reward") {
-      const enrichedReward = {
-        platform: "velora",
-        type: "reward",
-        rewardHTML: msg.rewardHTML,
-        username: msg.username,
-        rewardName: msg.rewardName,
-        rewardIcon: msg.rewardIcon
-      };
-
-      console.log("VELORA DEBUG outgoing REWARD:", enrichedReward);
-      broadcast(enrichedReward);
-      return;
-    }
-
-    // ⭐ Normal chat message path
     const avatar = await fetchVeloraAvatar(msg.username);
 
     const enriched = {
       ...msg,
-      avatar,
-      safeHtml: sanitizeHTML(msg.safeHtml)
+      avatar
     };
 
-    console.log("VELORA DEBUG outgoing CHAT:", enriched);
+    console.log("VELORA DEBUG outgoing (DOM):", enriched);
+
     broadcast(enriched);
   });
 
-  // Optimized Velora DOM observer: process .msg AND reward cards
+  // Optimized Velora DOM observer: only process newly added .msg nodes
   await page.evaluate(() => {
     const observer = new MutationObserver((mutations) => {
       for (const m of mutations) {
         for (const node of m.addedNodes) {
           if (!(node instanceof HTMLElement)) continue;
 
-          // ⭐ Detect reward cards (full wrapper)
-          if (node.classList.contains("mx-1") && node.classList.contains("my-1.5")) {
-            const rewardHTML = node.outerHTML;
-
-            // Username
-            const usernameEl = node.querySelector(".animate-[glow_2s_ease-in-out_infinite]");
-            const username = usernameEl
-              ? usernameEl.innerText.replace(":", "").trim()
-              : null;
-
-            // Reward name
-            const rewardNameEl = node.querySelector(".animate-pulse span");
-            const rewardName = rewardNameEl ? rewardNameEl.innerText.trim() : null;
-
-            // Reward icon (SVG or IMG)
-            const iconEl = node.querySelector(".flex.h-12.w-12 svg, .flex.h-12.w-12 img");
-            const rewardIcon = iconEl ? iconEl.outerHTML : null;
-
-            window.relayVelora({
-              platform: "velora",
-              type: "reward",
-              rewardHTML,
-              username,
-              rewardName,
-              rewardIcon
-            });
-
-            continue; // Prevent falling through to normal chat logic
-          }
-
-          // ⭐ Normal chat messages
+          // Only handle actual chat message containers
           if (!node.classList.contains("msg")) continue;
 
           // USERNAME
@@ -133,11 +88,10 @@ export async function startVelora(browser, broadcast) {
               src.includes("assets.velora.tv/badges")
             );
 
-          // Send safeHtml (sanitized on Node side)
           window.relayVelora({
             platform: "velora",
             username,
-            safeHtml: html,
+            html,
             badges
           });
         }
@@ -148,4 +102,90 @@ export async function startVelora(browser, broadcast) {
   });
 
   console.log("Velora chat observer active.");
+
+  // ⭐ Start WebSocket for official reward events
+  startVeloraWebSocket(broadcast);
+}
+
+// ⭐ Velora Chat WebSocket (official reward events + reward card fetcher)
+function startVeloraWebSocket(broadcast) {
+  const VELORA_TOKEN =
+    process.env.VELORA_TOKEN ||
+    "PASTE_YOUR_VELORA_ACCESS_TOKEN_HERE"; // <-- paste your access_token here
+
+  const ws = new WebSocket("wss://api.velora.tv/api/chat");
+
+  ws.on("open", () => {
+    console.log("Velora WebSocket connected.");
+
+    ws.send(JSON.stringify({
+      type: "authenticate",
+      token: VELORA_TOKEN
+    }));
+  });
+
+  ws.on("message", async (raw) => {
+    let msg;
+    try {
+      msg = JSON.parse(raw);
+    } catch {
+      return;
+    }
+
+    // ⭐ Reward redemptions
+    if (msg.type === "reward_redeemed") {
+      const data = msg.data || {};
+      const reward = data.reward || {};
+
+      console.log("VELORA DEBUG incoming (WS REWARD):", msg);
+
+      // ⭐ Fetch the REAL Velora reward card HTML
+      let rewardHTML = null;
+
+      try {
+        const res = await fetch(
+          `https://api.velora.tv/api/channel-points/rewards/${reward.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${VELORA_TOKEN}`
+            }
+          }
+        );
+
+        if (res.ok) {
+          const json = await res.json();
+          rewardHTML = json?.html || null;
+        } else {
+          console.warn("Velora reward fetch failed:", res.status);
+        }
+      } catch (err) {
+        console.error("Velora reward fetch error:", err);
+      }
+
+      // ⭐ Broadcast to overlay
+      const payload = {
+        platform: "velora",
+        type: "reward",
+        username: data.username || null,
+        rewardName: reward.name || null,
+        rewardIcon: reward.icon || null,
+        rewardHTML
+      };
+
+      console.log("VELORA DEBUG outgoing (WS REWARD):", payload);
+      broadcast(payload);
+      return;
+    }
+
+    // Ignore other WS messages (DOM scraper handles chat)
+  });
+
+  ws.on("close", () => {
+    console.log("Velora WebSocket disconnected. Reconnecting in 5s…");
+    setTimeout(() => startVeloraWebSocket(broadcast), 5000);
+  });
+
+  ws.on("error", (err) => {
+    console.error("Velora WebSocket error:", err);
+  });
 }
