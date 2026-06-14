@@ -128,10 +128,16 @@ async function fetchRewardCatalog() {
       return;
     }
 
-    const list = await res.json();
+    const json = await res.json();
+
+    if (!json.items || !Array.isArray(json.items)) {
+      console.error("[Velora] Unexpected reward catalog format:", json);
+      return;
+    }
+
     rewardCatalog = {};
 
-    for (const item of list) {
+    for (const item of json.items) {
       rewardCatalog[item.id] = item;
     }
 
@@ -392,8 +398,8 @@ async function handleVeloraRewardEvent(payload, broadcast) {
   const catalogItem = rewardCatalog[rewardId] || {};
 
   let rewardHTML = null;
-  let rewardIcon = catalogItem.icon || reward.icon || null;
-  let rewardColor = catalogItem.color || "#ff00ff";
+  let rewardIcon = catalogItem.iconUrl || reward.icon || null;
+  let rewardColor = catalogItem.cardDesign?.border?.color || "#ff00ff";
 
   try {
     if (rewardId) {
