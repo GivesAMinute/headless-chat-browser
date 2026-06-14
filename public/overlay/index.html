@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
 <style>
-  /* ⭐ Velora reward card styles */
+  /* Velora reward card styles */
 
   .velora-reward-wrapper {
     position: fixed;
@@ -182,7 +182,6 @@
     return `hsl(${hue}, 70%, 60%)`;
   }
 
-  /* Blaze role icons (unchanged) */
   const MOD_SVG = `
 <span class="tooltip-wrapper">
   <span class="blaze-icon-wrapper">
@@ -230,7 +229,6 @@
   <span class="tooltip-bubble">Streamer</span>
 </span>`;
 
-  /* Velora caches */
   const veloraAvatarCache = new Map();
 
   async function ensureVeloraAvatar(msg) {
@@ -263,7 +261,6 @@
     return msg;
   }
 
-  /* ⭐ FULL VELORA REWARD CARD RENDERER */
   function buildVeloraBackgroundStyle(cardDesign) {
     if (!cardDesign || !cardDesign.background) return "";
     const bg = cardDesign.background;
@@ -282,7 +279,6 @@
   }
 
   function buildVeloraTextureStyle(cardDesign) {
-    // For now we just slightly darken; full texture patterns would be overkill
     if (!cardDesign || !cardDesign.texture || !cardDesign.texture.enabled) return "";
     return "box-shadow: inset 0 0 40px rgba(0,0,0,0.25);";
   }
@@ -312,11 +308,23 @@
       .replace("{Reward}", reward);
   }
 
+  // ⭐ global dedupe set for reward cards
+  window.__veloraRewardSeen ??= new Set();
+
   function renderVeloraRewardMessage(msg) {
+    // ⭐ dedupe by redemptionId
+    if (msg.redemptionId) {
+      if (window.__veloraRewardSeen.has(msg.redemptionId)) return;
+      window.__veloraRewardSeen.add(msg.redemptionId);
+
+      if (window.__veloraRewardSeen.size > 5000) {
+        window.__veloraRewardSeen.clear();
+      }
+    }
+
     const wrapper = document.createElement("div");
     wrapper.className = "velora-reward-wrapper";
 
-    // If Velora ever sends HTML, we still support it
     if (msg.rewardHTML) {
       wrapper.innerHTML = msg.rewardHTML;
       document.getElementById("messages").appendChild(wrapper);
@@ -413,13 +421,18 @@
 
     msg = await ensureVeloraAvatar(msg);
 
-    /* ⭐ Reward message routing */
+    // ⭐ suppress Velora Community Bot redemption messages
+    if (msg.platform === "velora" && msg.username === "Velora Community Bot") {
+      if (msg.html && msg.html.includes("redeemed")) {
+        return;
+      }
+    }
+
+    // ⭐ reward routing
     if (msg.platform === "velora" && msg.type === "reward") {
       renderVeloraRewardMessage(msg);
       return;
     }
-
-    /* ⭐ NORMAL CHAT MESSAGE RENDERING BELOW */
 
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
@@ -428,7 +441,6 @@
       wrapper.classList.add(`platform-${msg.platform.toLowerCase()}`);
     }
 
-    /* PLATFORM ICON */
     const iconPath = getPlatformIcon(msg.platform);
     if (iconPath) {
       wrapper.insertAdjacentHTML("beforeend", `
@@ -445,7 +457,6 @@
     const content = document.createElement("div");
     content.className = "content";
 
-    /* INLINE AVATAR */
     if (msg.avatar && typeof msg.avatar === "string" && msg.avatar.startsWith("http")) {
       const inlineAvatar = document.createElement("img");
       inlineAvatar.className = "inline-avatar";
@@ -453,7 +464,6 @@
       content.appendChild(inlineAvatar);
     }
 
-    /* ⭐ UPDATED — Velora badges (object format) */
     if (msg.platform === "velora" && Array.isArray(msg.badges)) {
       msg.badges.forEach(badge => {
         if (!badge || !badge.icon) return;
@@ -467,7 +477,6 @@
       });
     }
 
-    /* Blaze role icons */
     if (msg.platform === "blaze") {
       if (msg.isMod)      content.insertAdjacentHTML("beforeend", MOD_SVG);
       if (msg.isOG)       content.insertAdjacentHTML("beforeend", OG_SVG);
@@ -475,7 +484,6 @@
       if (msg.isStreamer) content.insertAdjacentHTML("beforeend", STREAMER_SVG);
     }
 
-    /* Universal badges (non-Velora) */
     if (msg.platform !== "velora" && msg.platform !== "blaze" && msg.badges?.length) {
       msg.badges.forEach(src => {
         const label = src.split("/").pop().replace(/\.(png|svg)/, "");
@@ -488,7 +496,6 @@
       });
     }
 
-    /* USERNAME */
     let cleanName = msg.username;
     if (msg.platform === "youtube" && cleanName?.startsWith("@")) {
       cleanName = cleanName.substring(1);
@@ -500,7 +507,6 @@
     name.style.color = colorForUsername(cleanName || "", msg.platform);
     content.appendChild(name);
 
-    /* MESSAGE TEXT */
     const text = document.createElement("div");
     text.className = "text";
     text.innerHTML = msg.html;
@@ -532,7 +538,6 @@
 
     document.getElementById("messages").appendChild(wrapper);
 
-    /* Swipe-left exit */
     setTimeout(() => {
       bubble.classList.add("fadeOut");
       setTimeout(() => wrapper.remove(), 600);

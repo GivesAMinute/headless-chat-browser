@@ -22,7 +22,7 @@ let globalEmotes = {};
 let channelEmotes = {};
 let emoteLookup = {}; // name → URL
 
-// Reward catalog cache (still useful if you want it later)
+// Reward catalog cache (kept for future use)
 let rewardCatalog = {};
 
 // ------------------------------------------------------------
@@ -115,7 +115,7 @@ async function fetchChannelEmotes() {
 }
 
 // ------------------------------------------------------------
-// Fetch reward catalog (kept, even if we don't need HTML)
+// Fetch reward catalog
 // ------------------------------------------------------------
 async function fetchRewardCatalog() {
   try {
@@ -323,7 +323,6 @@ function startVeloraSocketIO(broadcast) {
       return;
     }
 
-    // ⭐ REAL reward event name + legacy fallbacks
     if (
       event === "pointsCelebration" ||
       event === "rewardRedeemed" ||
@@ -394,29 +393,22 @@ async function handleVeloraRewardEvent(payload, broadcast) {
 
   console.log("[Velora] REWARD EVENT RECEIVED FROM SOCKET:", payload);
 
-  // pointsCelebration sends fields at top-level
   const data = payload.data || payload;
 
-  // Reward identity
-  const rewardId = data.itemId;          // actual reward id
-  const rewardName = data.itemName;      // "I Just Farted!"
-
-  // Full card design is already provided
+  const rewardId = data.itemId;
+  const rewardName = data.itemName;
   const cardDesign = data.cardDesign || {};
 
-  // Icon resolution
   const rewardIcon =
     cardDesign.icon?.customIconUrl ||
     cardDesign.icon?.emoteUrl ||
     data.itemIconUrl ||
     null;
 
-  // Border color
   const rewardColor =
     cardDesign.border?.color ||
     "#ff00ff";
 
-  // Velora does NOT provide HTML for these custom cards
   const rewardHTML = null;
 
   console.log("[Velora] SENDING REWARD TO OVERLAY:", {
@@ -429,6 +421,7 @@ async function handleVeloraRewardEvent(payload, broadcast) {
   broadcast({
     platform: "velora",
     type: "reward",
+    redemptionId: data.id, // ⭐ unique per redemption
     username: data.username || data.displayName || null,
     rewardName,
     rewardIcon,
