@@ -9,7 +9,7 @@ const VELORA_TOKEN =
 const VELORA_CHANNEL_ID =
   process.env.VELORA_CHANNEL_ID || "4f1cb975-eace-4650-8246-053007bd0036";
 
-const VELORA_CHANNEL_USERNAME = "GivesAMinute"; // ⭐ REQUIRED for channel emotes
+const VELORA_CHANNEL_USERNAME = "GivesAMinute"; // REQUIRED for channel emotes
 
 // Avatar cache
 const avatarCache = Object.create(null);
@@ -17,16 +17,16 @@ const avatarCache = Object.create(null);
 // Deduplication cache
 const seenMessageIds = new Set();
 
-// ⭐ Emote metadata caches
+// Emote metadata caches
 let globalEmotes = {};
 let channelEmotes = {};
 let emoteLookup = {}; // name → URL
 
-// ⭐ Reward catalog cache
+// Reward catalog cache
 let rewardCatalog = {};
 
 // ------------------------------------------------------------
-// ⭐ Fetch global emotes
+// Fetch global emotes
 // ------------------------------------------------------------
 async function fetchGlobalEmotes() {
   try {
@@ -69,7 +69,7 @@ async function fetchGlobalEmotes() {
 }
 
 // ------------------------------------------------------------
-// ⭐ Fetch channel emotes (username-based endpoint)
+// Fetch channel emotes
 // ------------------------------------------------------------
 async function fetchChannelEmotes() {
   try {
@@ -115,7 +115,7 @@ async function fetchChannelEmotes() {
 }
 
 // ------------------------------------------------------------
-// ⭐ Fetch reward catalog (icons, colors, metadata)
+// Fetch reward catalog
 // ------------------------------------------------------------
 async function fetchRewardCatalog() {
   try {
@@ -149,7 +149,7 @@ async function fetchRewardCatalog() {
 }
 
 // ------------------------------------------------------------
-// ⭐ Build lookup table
+// Build lookup table
 // ------------------------------------------------------------
 function rebuildEmoteLookup() {
   emoteLookup = {
@@ -161,7 +161,7 @@ function rebuildEmoteLookup() {
 }
 
 // ------------------------------------------------------------
-// ⭐ Convert emote names → <img>
+// Convert emote names → <img>
 // ------------------------------------------------------------
 function convertVeloraEmoteNames(html) {
   if (!html) return html;
@@ -255,12 +255,11 @@ function normalizeVeloraBadges(badgesRaw, data) {
 }
 
 // ------------------------------------------------------------
-// ⭐ Start Velora
+// Start Velora
 // ------------------------------------------------------------
 export function startVelora(broadcast) {
   console.log("Starting Velora Socket.IO ingestion…");
 
-  // ⭐ Fetch emotes + rewards on startup
   (async () => {
     await fetchGlobalEmotes();
     await fetchChannelEmotes();
@@ -272,7 +271,7 @@ export function startVelora(broadcast) {
 }
 
 // ------------------------------------------------------------
-// ⭐ Socket.IO
+// Socket.IO
 // ------------------------------------------------------------
 function startVeloraSocketIO(broadcast) {
   if (!VELORA_TOKEN || VELORA_TOKEN.includes("PASTE_")) {
@@ -302,7 +301,6 @@ function startVeloraSocketIO(broadcast) {
       channelId: VELORA_CHANNEL_ID,
     });
 
-    // ⭐ Refresh emotes + rewards on reconnect
     await fetchGlobalEmotes();
     await fetchChannelEmotes();
     await fetchRewardCatalog();
@@ -335,7 +333,7 @@ function startVeloraSocketIO(broadcast) {
 }
 
 // ------------------------------------------------------------
-// ⭐ Chat event
+// Chat event
 // ------------------------------------------------------------
 async function handleVeloraChatEvent(payload, broadcast) {
   if (!payload) return;
@@ -363,7 +361,6 @@ async function handleVeloraChatEvent(payload, broadcast) {
     data.message ||
     "";
 
-  // ⭐ Convert emote names → <img>
   html = convertVeloraEmoteNames(html);
 
   const badges = normalizeVeloraBadges(data.badges, data);
@@ -386,12 +383,13 @@ async function handleVeloraChatEvent(payload, broadcast) {
 }
 
 // ------------------------------------------------------------
-// ⭐ Reward event (full reward card support)
+// ⭐ Reward event (with debug logs added)
 // ------------------------------------------------------------
-console.log("[Velora] REWARD EVENT RECEIVED FROM SOCKET:", payload);
-
 async function handleVeloraRewardEvent(payload, broadcast) {
   if (!payload) return;
+
+  // ⭐ DEBUG LOG #1 — confirm event received
+  console.log("[Velora] REWARD EVENT RECEIVED FROM SOCKET:", payload);
 
   const data = payload.data || payload;
   const reward = data.reward || data;
@@ -423,14 +421,14 @@ async function handleVeloraRewardEvent(payload, broadcast) {
   } catch (err) {
     console.error("[Velora] Reward fetch error:", err);
   }
-  
-  console.log("[Velora] SENDING REWARD TO OVERLAY:", {
-  rewardId,
-  rewardName: reward.name,
-  username: data.username,
-  hasHTML: !!rewardHTML
-});
 
+  // ⭐ DEBUG LOG #2 — confirm broadcast payload
+  console.log("[Velora] SENDING REWARD TO OVERLAY:", {
+    rewardId,
+    rewardName: reward.name || catalogItem.name,
+    username: data.username || data.user?.username,
+    hasHTML: !!rewardHTML
+  });
 
   broadcast({
     platform: "velora",
