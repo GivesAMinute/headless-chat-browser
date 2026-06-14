@@ -4,7 +4,7 @@
 // - Rewards via events + HTML fetch
 // - Avatar enrichment
 // - Badge mapping (icon + label)
-// - Emote-safe HTML passthrough
+// - Emote URL fixing
 // - Message type tagging + debug logging
 
 import { io } from "socket.io-client";
@@ -23,6 +23,17 @@ const avatarCache = Object.create(null);
 
 // Deduplication cache
 const seenMessageIds = new Set();
+
+// ⭐ Fix Velora emote URLs (relative → absolute)
+function fixVeloraEmoteURLs(html) {
+  if (!html) return html;
+
+  // Convert <img src="/something"> → https://velora.tv/something
+  return html.replace(
+    /<img([^>]+)src="\/([^">]+)"/g,
+    `<img$1src="https://velora.tv/$2"`
+  );
+}
 
 export function startVelora(broadcast) {
   console.log("Starting Velora Socket.IO ingestion…");
@@ -201,11 +212,14 @@ async function handleVeloraChatEvent(payload, broadcast) {
     data.user?.username ||
     null;
 
-  const html =
+  let html =
     data.message_html ||
     data.html ||
     data.message ||
     "";
+
+  // ⭐ Fix emote URLs
+  html = fixVeloraEmoteURLs(html);
 
   const badges = normalizeVeloraBadges(data.badges, data);
 
