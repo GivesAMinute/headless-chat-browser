@@ -1,5 +1,5 @@
 // sources/velora.js
-// Velora Socket.IO integration with full emote metadata support
+// Velora Socket.IO integration with global emote metadata support
 
 import { io } from "socket.io-client";
 
@@ -17,54 +17,56 @@ const seenMessageIds = new Set();
 
 // ⭐ Emote metadata caches
 let globalEmotes = {};
-let channelEmotes = {};
 let emoteLookup = {}; // name → URL
 
-// Fetch global emotes
+// ⭐ Fetch global emotes (correct API structure)
 async function fetchGlobalEmotes() {
   try {
     const res = await fetch("https://api.velora.tv/api/emotes/global");
-    if (!res.ok) return;
+    if (!res.ok) {
+      console.error("[Velora] Global emote fetch failed:", res.status);
+      return;
+    }
 
-    const list = await res.json();
+    const json = await res.json();
     globalEmotes = {};
 
-    for (const e of list) {
-      if (!e.name || !e.sizes?.["56"]) continue;
-      globalEmotes[e.name] = e.sizes["56"];
+    if (!json.collections || !Array.isArray(json.collections)) {
+      console.error("[Velora] Unexpected global emote format:", json);
+      return;
     }
+
+    for (const collection of json.collections) {
+      if (!collection.emotes) continue;
+
+      for (const emote of collection.emotes) {
+        if (!emote.code) continue;
+
+        const url =
+          emote.assetVariants?.static2x ||
+          emote.assetVariants?.static1x ||
+          null;
+
+        if (url) {
+          globalEmotes[emote.code] = url;
+        }
+      }
+    }
+
+    console.log("[Velora] Loaded global emotes:", Object.keys(globalEmotes).length);
+
   } catch (err) {
     console.error("[Velora] Failed to fetch global emotes:", err);
   }
 }
 
-// Fetch channel emotes
-async function fetchChannelEmotes() {
-  try {
-    const res = await fetch(
-      `https://api.velora.tv/api/emotes/channel/${VELORA_CHANNEL_ID}`
-    );
-    if (!res.ok) return;
-
-    const list = await res.json();
-    channelEmotes = {};
-
-    for (const e of list) {
-      if (!e.name || !e.sizes?.["56"]) continue;
-      channelEmotes[e.name] = e.sizes["56"];
-    }
-  } catch (err) {
-    console.error("[Velora] Failed to fetch channel emotes:", err);
-  }
-}
-
-// Build lookup table
+// ⭐ Build lookup table
 function rebuildEmoteLookup() {
-  emoteLookup = { ...globalEmotes, ...channelEmotes };
+  emoteLookup = { ...globalEmotes };
   console.log("[Velora] Emote lookup built:", Object.keys(emoteLookup).length);
 }
 
-// Convert emote names → <img>
+// ⭐ Convert emote names → <img>
 function convertVeloraEmoteNames(html) {
   if (!html) return html;
 
@@ -155,10 +157,9 @@ function normalizeVeloraBadges(badgesRaw, data) {
 export function startVelora(broadcast) {
   console.log("Starting Velora Socket.IO ingestion…");
 
-  // ⭐ Fetch emotes on startup
+  // ⭐ Fetch global emotes on startup
   (async () => {
     await fetchGlobalEmotes();
-    await fetchChannelEmotes();
     rebuildEmoteLookup();
   })();
 
@@ -193,9 +194,8 @@ function startVeloraSocketIO(broadcast) {
       channelId: VELORA_CHANNEL_ID,
     });
 
-    // ⭐ Refresh emotes on reconnect
+    // ⭐ Refresh global emotes on reconnect
     await fetchGlobalEmotes();
-    await fetchChannelEmotes();
     rebuildEmoteLookup();
   });
 
