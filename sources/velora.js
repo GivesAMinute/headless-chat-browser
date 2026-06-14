@@ -388,6 +388,8 @@ async function handleVeloraChatEvent(payload, broadcast) {
 // ------------------------------------------------------------
 // ⭐ Reward event (full reward card support)
 // ------------------------------------------------------------
+console.log("[Velora] REWARD EVENT RECEIVED FROM SOCKET:", payload);
+
 async function handleVeloraRewardEvent(payload, broadcast) {
   if (!payload) return;
 
@@ -421,6 +423,14 @@ async function handleVeloraRewardEvent(payload, broadcast) {
   } catch (err) {
     console.error("[Velora] Reward fetch error:", err);
   }
+  
+  console.log("[Velora] SENDING REWARD TO OVERLAY:", {
+  rewardId,
+  rewardName: reward.name,
+  username: data.username,
+  hasHTML: !!rewardHTML
+});
+
 
   broadcast({
     platform: "velora",
