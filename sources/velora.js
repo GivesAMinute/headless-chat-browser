@@ -12,7 +12,7 @@ import { io } from "socket.io-client";
 // ⭐ FILL THESE IN
 const VELORA_TOKEN =
   process.env.VELORA_TOKEN ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZjFjYjk3NS1lYWNlLTQ2NTAtODI0Ni0wNTMwMDdiZDAwMzYiLCJ1c2VybmFtZSI6IkdpdmVzQU1pbnV0ZSIsImVtYWlsIjoiYmVub25rb2Vic2NoQGdtYWlsLmNvbSIsInJvbGUiOiJjcmVhdG9yIiwiaWF0IjoxNzgxMzg2NDk2LCJleHAiOjE3ODE5OTEyOTYsImF1ZCI6InZlbG9yYS1hcGkiLCJpc3MiOiJ2ZWxvcmEudHYifQ.AUDMnQ7AeJMfobcOiGjBSLSx5X0aOqRwdsDS_ROTWZg";
+  "YOUR_TOKEN_HERE";
 
 const VELORA_CHANNEL_ID =
   process.env.VELORA_CHANNEL_ID ||
@@ -82,15 +82,14 @@ function normalizeVeloraBadges(badgesRaw, data) {
       continue;
     }
 
-    // Broadcaster badge (correct path from Velora UI)
-if (b === "broadcaster") {
-  out.push({
-    icon: "/velora-badges/StreamerBroadcasterBadge.png",
-    label: "Broadcaster",
-  });
-  continue;
-}
-
+    // ⭐ Broadcaster badge (LOCAL FILE)
+    if (b === "broadcaster") {
+      out.push({
+        icon: "/icons/StreamerBroadcasterBadge.png",
+        label: "Broadcaster",
+      });
+      continue;
+    }
 
     // Moderator badge
     if (b === "moderator") {
@@ -275,4 +274,3 @@ async function handleVeloraRewardEvent(payload, broadcast) {
   console.log("[Velora] REWARD OUT:", out);
   broadcast(out);
 }
-
